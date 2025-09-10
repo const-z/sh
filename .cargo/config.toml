@@ -1,0 +1,7 @@
+[alias]
+lint = "clippy -- -D warnings"
+test-lib = "test --package=sh_lib"
+test-ex = "test --package=sh_ex"
+fmt-check = "fmt -- --check"
+br = "build --release"
+clean = "rm -rf target"
