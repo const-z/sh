@@ -1,4 +1,4 @@
 [workspace]
-members = ["sh_lib", "sh_ex"]
+members = ["sh_lib", "sh_ex", "test_lib"]
 
 resolver = "3"
