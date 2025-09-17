@@ -1,5 +1,8 @@
-use super::{OnOff, SmartDevice};
+use crate::Report;
 
+use super::{OnOff, SmartDevice, SmartDeviceType};
+
+#[derive(Clone, Debug)]
 pub struct SmartSocket {
     name: String,
     power: f32,
@@ -39,8 +42,14 @@ impl SmartSocket {
 }
 
 impl SmartDevice for SmartSocket {
+    fn get_name(&self) -> &String {
+        &self.name
+    }
+}
+
+impl Report for SmartSocket {
     /// Получить статус розетки
-    fn get_status(&self) -> String {
+    fn get_status_report(&self) -> String {
         format!(
             "{}: {}",
             self.name,
@@ -49,6 +58,12 @@ impl SmartDevice for SmartSocket {
                 OnOff::Off => "Выкл".to_string(),
             }
         )
+    }
+}
+
+impl From<SmartSocket> for SmartDeviceType {
+    fn from(value: SmartSocket) -> Self {
+        SmartDeviceType::Socket(value)
     }
 }
 
@@ -71,27 +86,27 @@ mod tests {
     #[test]
     fn socket_status() {
         let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
-        assert_eq!(socket.get_status(), "Розетка: Вкл, 1000 Вт");
+        assert_eq!(socket.get_status_report(), "Розетка: Вкл, 1000 Вт");
     }
 
     #[test]
     fn socket_status_off() {
         let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
-        assert_eq!(socket.get_status(), "Розетка: Выкл");
+        assert_eq!(socket.get_status_report(), "Розетка: Выкл");
     }
 
     #[test]
     fn socket_turn_on() {
         let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
         socket.turn_on();
-        assert_eq!(socket.get_status(), "Розетка: Вкл, 1000 Вт");
+        assert_eq!(socket.get_status_report(), "Розетка: Вкл, 1000 Вт");
     }
 
     #[test]
     fn socket_turn_off() {
         let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
         socket.turn_off();
-        assert_eq!(socket.get_status(), "Розетка: Выкл");
+        assert_eq!(socket.get_status_report(), "Розетка: Выкл");
     }
 
     #[test]
