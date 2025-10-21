@@ -101,11 +101,8 @@ mod tests {
 
         let device = room.get_device_mut("Термометр").unwrap();
 
-        match device {
-            SmartDeviceType::Thermometer(thermometer) => {
-                thermometer.set_temp(25.0);
-            }
-            _ => {}
+        if let SmartDeviceType::Thermometer(thermometer) = device {
+            thermometer.set_temp(25.0);
         }
 
         assert_eq!(

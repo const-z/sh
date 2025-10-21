@@ -112,12 +112,12 @@ mod tests {
     #[test]
     fn socket_is_on_true() {
         let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
-        assert_eq!(socket.is_on(), true);
+        assert!(socket.is_on());
     }
 
     #[test]
     fn socket_is_on_false() {
         let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
-        assert_eq!(socket.is_on(), false);
+        assert!(socket.is_on());
     }
 }
