@@ -1,95 +1,105 @@
-// use crate::smart_device::{Device, SmartDevice};
-use crate::smart_device::{SmartDevice, SmartDeviceType, SmartSocket, SmartThermometer};
+use std::collections::HashMap;
+use std::fmt::Write;
 
+use crate::{
+    Report,
+    smart_device::{SmartDevice, SmartDeviceType},
+};
+
+#[derive(Clone, Debug)]
 pub struct SmartRoom {
     name: String,
-    devices: Vec<SmartDeviceType>,
+    devices: HashMap<String, SmartDeviceType>,
 }
 
 impl SmartRoom {
     /// Создать комнату
-    pub fn new(name: String, devices: Vec<SmartDeviceType>) -> Self {
-        Self { name, devices }
+    pub fn new(name: String, devices: &[SmartDeviceType]) -> Self {
+        Self {
+            name,
+            devices: HashMap::from_iter(devices.iter().map(|d| (d.get_name().clone(), d.clone()))),
+        }
+    }
+
+    pub fn get_name(&self) -> &String {
+        &self.name
     }
 
     /// Получить ссылку на устройство по его индексу
-    pub fn get_device(&self, index: usize) -> &SmartDeviceType {
-        &self.devices[index]
+    pub fn get_device(&self, name: &str) -> Option<&SmartDeviceType> {
+        self.devices.get(name)
     }
 
     /// Получить мутабельную ссылку на устройство по его индексу
-    pub fn get_device_mut(&mut self, index: usize) -> &mut SmartDeviceType {
-        &mut self.devices[index]
+    pub fn get_device_mut(&mut self, name: &str) -> Option<&mut SmartDeviceType> {
+        self.devices.get_mut(name)
     }
 
-    /// Получить ссылку на хранилище устройств в комнате
-    pub fn get_devices(&self) -> &Vec<SmartDeviceType> {
-        &self.devices
+    /// Получить массив ссылок на устройства в комнате
+    pub fn get_devices(&self) -> Vec<&SmartDeviceType> {
+        Vec::from_iter(self.devices.values())
     }
 
-    /// Получить мутабельную ссылку на хранилище устройств в комнате
-    pub fn get_devices_mut(&mut self) -> &mut Vec<SmartDeviceType> {
-        &mut self.devices
+    /// Получить массив мутабельных ссылок на устройства в комнате
+    pub fn get_devices_mut(&mut self) -> Vec<&mut SmartDeviceType> {
+        Vec::from_iter(self.devices.values_mut())
     }
 
+    pub fn add_device<T>(&mut self, device: T)
+    where
+        T: SmartDevice + Into<SmartDeviceType>,
+    {
+        self.devices
+            .insert(String::from(device.get_name()), device.into());
+    }
+
+    /// Удалить устройство из комнаты
+    pub fn del_device(&mut self, device_name: &str) {
+        self.devices.remove(device_name);
+    }
+}
+
+impl Report for SmartRoom {
     /// Вывести отчет о состоянии комнаты
-    pub fn print_status_report(&self, indent_size: u8) {
-        let indent = String::from_utf8(vec![b' '; indent_size as usize]).unwrap();
-        println!(r#"{}== Отчет по комнате "{}" =="#, indent, self.name);
+    fn get_status_report(&self) -> String {
+        let mut output = format!(r#"Отчет по комнате "{}"{}"#, self.name, "\n");
 
-        for (i, device) in self.devices.iter().enumerate() {
-            println!("{}{}{}: {}", indent, indent, i + 1, device.get_status());
+        for (i, device) in self.devices.values().enumerate() {
+            writeln!(output, "{}. {}", i + 1, device.get_status_report()).unwrap();
         }
-    }
-}
 
-pub trait AddDevice<T> {
-    /// Добавить устройство в комнату
-    fn add_device(&mut self, device: T);
-}
-
-impl AddDevice<SmartSocket> for SmartRoom {
-    fn add_device(&mut self, device: SmartSocket) {
-        self.devices.push(SmartDeviceType::Socket(device));
-    }
-}
-
-impl AddDevice<SmartThermometer> for SmartRoom {
-    fn add_device(&mut self, device: SmartThermometer) {
-        self.devices.push(SmartDeviceType::Thermometer(device));
+        output
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::smart_device::OnOff;
+    use crate::smart_device::{OnOff, SmartSocket, SmartThermometer};
 
     #[test]
     fn add_device() {
-        let mut room = SmartRoom::new(String::from("Комната"), vec![]);
+        let mut room = SmartRoom::new(String::from("Комната"), &[]);
         room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
         room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On));
 
-        assert_eq!(room.get_device(0).get_status(), "Термометр: 24 C°");
-        assert_eq!(room.get_device(1).get_status(), "Розетка: Вкл, 1000 Вт");
-    }
-
-    #[test]
-    fn print_status_report() {
-        let mut room = SmartRoom::new(String::from("Комната"), vec![]);
-        room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
-        room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On));
-        room.print_status_report(4);
+        assert_eq!(
+            room.get_device("Термометр").unwrap().get_status_report(),
+            "Термометр: 24 C°"
+        );
+        assert_eq!(
+            room.get_device("Розетка").unwrap().get_status_report(),
+            "Розетка: Вкл, 1000 Вт"
+        );
     }
 
     #[test]
     fn get_mut_device() {
-        let mut room = SmartRoom::new(String::from("Комната"), vec![]);
+        let mut room = SmartRoom::new(String::from("Комната"), &[]);
         room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
         room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On));
 
-        let device = room.get_device_mut(0);
+        let device = room.get_device_mut("Термометр").unwrap();
 
         match device {
             SmartDeviceType::Thermometer(thermometer) => {
@@ -98,6 +108,9 @@ mod tests {
             _ => {}
         }
 
-        assert_eq!(room.get_device(0).get_status(), "Термометр: 25 C°");
+        assert_eq!(
+            room.get_device("Термометр").unwrap().get_status_report(),
+            "Термометр: 25 C°"
+        );
     }
 }
