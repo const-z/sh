@@ -1,5 +1,5 @@
 [alias]
-lint = "clippy -- -D warnings"
+lint = "clippy --all --all-targets -- -D warnings"
 test-lib = "test --package=sh_lib"
 test-ex = "test --package=sh_ex"
 fmt-check = "fmt -- --check"
