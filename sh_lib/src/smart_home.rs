@@ -71,11 +71,11 @@ impl SmartHome {
 }
 
 impl Report for SmartHome {
-    fn get_status_report(&self) -> String {
+    async fn get_status_report(&self) -> String {
         let mut output = format!(r#"Отчет по дому "{}"{}"#, self.name, "\n");
 
         for room in self.rooms.values() {
-            write!(output, "{}", room.get_status_report()).unwrap();
+            write!(output, "{}", room.get_status_report().await).unwrap();
         }
 
         write!(output, r#"Конец отчета по дому "{}""#, self.name).unwrap();

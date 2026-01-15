@@ -4,7 +4,7 @@ pub mod smart_home;
 pub mod smart_room;
 
 pub trait Report {
-    fn get_status_report(&self) -> String;
+    fn get_status_report(&self) -> impl std::future::Future<Output = String> + Send;
 }
 
 /// Макрос для создания комнат
@@ -16,6 +16,7 @@ macro_rules! create_room {
 
     ($name:expr, $($device:expr),* $(,)?) => {
         {
+            use sh_lib::smart_room::SmartRoom;
             let mut room = SmartRoom::new(String::from($name), &[]);
             $(
                 room.add_device($device);

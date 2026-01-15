@@ -1,0 +1,9 @@
+[package]
+name = "sh_socket_emulator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dotenv = "0.15.0"
+sh_lib = { path = "../sh_lib" }
+tokio = { version = "1.48.0", features = ["full"] }

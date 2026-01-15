@@ -25,12 +25,12 @@ impl SmartRoom {
         &self.name
     }
 
-    /// Получить ссылку на устройство по его индексу
+    /// Получить ссылку на устройство по его имени
     pub fn get_device(&self, name: &str) -> Option<&SmartDeviceType> {
         self.devices.get(name)
     }
 
-    /// Получить мутабельную ссылку на устройство по его индексу
+    /// Получить мутабельную ссылку на устройство по его имени
     pub fn get_device_mut(&mut self, name: &str) -> Option<&mut SmartDeviceType> {
         self.devices.get_mut(name)
     }
@@ -61,11 +61,11 @@ impl SmartRoom {
 
 impl Report for SmartRoom {
     /// Вывести отчет о состоянии комнаты
-    fn get_status_report(&self) -> String {
+    async fn get_status_report(&self) -> String {
         let mut output = format!(r#"Отчет по комнате "{}"{}"#, self.name, "\n");
 
         for (i, device) in self.devices.values().enumerate() {
-            writeln!(output, "{}. {}", i + 1, device.get_status_report()).unwrap();
+            writeln!(output, "{}. {}", i + 1, device.get_status_report().await).unwrap();
         }
 
         output
@@ -77,24 +77,30 @@ mod tests {
     use super::*;
     use crate::smart_device::{OnOff, SmartSocket, SmartThermometer};
 
-    #[test]
-    fn add_device() {
+    #[tokio::test]
+    async fn add_device() {
         let mut room = SmartRoom::new(String::from("Комната"), &[]);
         room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
         room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On));
 
         assert_eq!(
-            room.get_device("Термометр").unwrap().get_status_report(),
+            room.get_device("Термометр")
+                .unwrap()
+                .get_status_report()
+                .await,
             "Термометр: 24 C°"
         );
         assert_eq!(
-            room.get_device("Розетка").unwrap().get_status_report(),
+            room.get_device("Розетка")
+                .unwrap()
+                .get_status_report()
+                .await,
             "Розетка: Вкл, 1000 Вт"
         );
     }
 
-    #[test]
-    fn get_mut_device() {
+    #[tokio::test]
+    async fn get_mut_device() {
         let mut room = SmartRoom::new(String::from("Комната"), &[]);
         room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
         room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On));
@@ -102,11 +108,14 @@ mod tests {
         let device = room.get_device_mut("Термометр").unwrap();
 
         if let SmartDeviceType::Thermometer(thermometer) = device {
-            thermometer.set_temp(25.0);
+            thermometer.set_temp(25.0).await;
         }
 
         assert_eq!(
-            room.get_device("Термометр").unwrap().get_status_report(),
+            room.get_device("Термометр")
+                .unwrap()
+                .get_status_report()
+                .await,
             "Термометр: 25 C°"
         );
     }
