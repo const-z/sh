@@ -5,7 +5,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     Report,
-    smart_device::{contracts::DeviceResponseData, online::ConnectionType},
+    smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
 use super::{SmartDevice, SmartDeviceType};
@@ -13,7 +13,7 @@ use super::{SmartDevice, SmartDeviceType};
 #[derive(Clone, Debug)]
 pub struct SmartThermometer {
     name: String,
-    pub value: Arc<RwLock<DeviceResponseData>>,
+    pub value: Arc<RwLock<DeviceData>>,
     pub connection: Option<ConnectionType>,
 }
 
@@ -36,9 +36,9 @@ impl SmartThermometer {
     pub fn new(name: String, temp: f32) -> Self {
         Self {
             name,
-            value: Arc::new(RwLock::new(DeviceResponseData::Thermometer(
-                ThermometerData::new(temp),
-            ))),
+            value: Arc::new(RwLock::new(DeviceData::Thermometer(ThermometerData::new(
+                temp,
+            )))),
             connection: None,
         }
     }
@@ -46,9 +46,9 @@ impl SmartThermometer {
     pub fn new_with_connection(name: String, temp: f32, connection: ConnectionType) -> Self {
         Self {
             name,
-            value: Arc::new(RwLock::new(DeviceResponseData::Thermometer(
-                ThermometerData::new(temp),
-            ))),
+            value: Arc::new(RwLock::new(DeviceData::Thermometer(ThermometerData::new(
+                temp,
+            )))),
             connection: Some(connection),
         }
     }
@@ -59,7 +59,7 @@ impl SmartThermometer {
 
     pub async fn set_temp(&mut self, temp: f32) {
         let mut value = self.value.write().await;
-        value.update(DeviceResponseData::Thermometer(ThermometerData::new(temp)));
+        value.update(DeviceData::Thermometer(ThermometerData::new(temp)));
     }
 }
 
@@ -68,7 +68,7 @@ impl SmartDevice for SmartThermometer {
         &self.name
     }
 
-    async fn get_data(&self) -> DeviceResponseData {
+    async fn get_data(&self) -> DeviceData {
         self.value.read().await.clone()
     }
 

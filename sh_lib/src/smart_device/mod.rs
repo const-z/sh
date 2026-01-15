@@ -8,7 +8,7 @@ pub use smart_thermometer::SmartThermometer;
 
 use crate::{
     Report,
-    smart_device::{contracts::DeviceResponseData, online::ConnectionType},
+    smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
 /// Тип умного устройства
@@ -32,7 +32,7 @@ pub enum OnOff {
 /// Умное устройство
 pub trait SmartDevice {
     fn get_name(&self) -> &String;
-    fn get_data(&self) -> impl Future<Output = DeviceResponseData>;
+    fn get_data(&self) -> impl Future<Output = DeviceData>;
     fn get_connection(&self) -> Option<&ConnectionType>;
 }
 
@@ -44,7 +44,7 @@ impl SmartDevice for SmartDeviceType {
         }
     }
 
-    async fn get_data(&self) -> DeviceResponseData {
+    async fn get_data(&self) -> DeviceData {
         match self {
             SmartDeviceType::Socket(s) => s.get_data().await,
             SmartDeviceType::Thermometer(t) => t.get_data().await,

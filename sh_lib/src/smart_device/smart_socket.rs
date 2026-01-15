@@ -5,7 +5,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     Report,
-    smart_device::{contracts::DeviceResponseData, online::ConnectionType},
+    smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
 use super::{OnOff, SmartDevice, SmartDeviceType};
@@ -30,7 +30,7 @@ impl SocketData {
 #[derive(Clone, Debug)]
 pub struct SmartSocket {
     name: String,
-    pub value: Arc<RwLock<DeviceResponseData>>,
+    pub value: Arc<RwLock<DeviceData>>,
     pub connection: Option<ConnectionType>,
 }
 
@@ -38,7 +38,7 @@ impl SmartSocket {
     pub fn new(name: String, power: f32, is_on: OnOff) -> Self {
         Self {
             name,
-            value: Arc::new(RwLock::new(DeviceResponseData::Socket(SocketData::new(
+            value: Arc::new(RwLock::new(DeviceData::Socket(SocketData::new(
                 power,
                 is_on == OnOff::On,
             )))),
@@ -54,7 +54,7 @@ impl SmartSocket {
     ) -> Self {
         Self {
             name,
-            value: Arc::new(RwLock::new(DeviceResponseData::Socket(SocketData::new(
+            value: Arc::new(RwLock::new(DeviceData::Socket(SocketData::new(
                 power,
                 is_on == OnOff::On,
             )))),
@@ -66,7 +66,7 @@ impl SmartSocket {
     pub async fn turn_on(&mut self) {
         let mut value = self.value.write().await;
         let current_data = value.clone().as_socket();
-        value.update(DeviceResponseData::Socket(SocketData::new(
+        value.update(DeviceData::Socket(SocketData::new(
             current_data.power,
             true,
         )));
@@ -76,7 +76,7 @@ impl SmartSocket {
     pub async fn turn_off(&mut self) {
         let mut value = self.value.write().await;
         let current_data = value.clone().as_socket();
-        value.update(DeviceResponseData::Socket(SocketData::new(
+        value.update(DeviceData::Socket(SocketData::new(
             current_data.power,
             false,
         )));
@@ -93,7 +93,7 @@ impl SmartDevice for SmartSocket {
         &self.name
     }
 
-    async fn get_data(&self) -> DeviceResponseData {
+    async fn get_data(&self) -> DeviceData {
         self.value.read().await.clone()
     }
 
@@ -125,7 +125,7 @@ impl From<SmartSocket> for SmartDeviceType {
 
 #[cfg(test)]
 mod tests {
-    use crate::smart_device::contracts::DeviceResponseData;
+    use crate::smart_device::contracts::DeviceData;
 
     use super::*;
 
@@ -133,7 +133,7 @@ mod tests {
     async fn socket_power_zero_if_off() {
         let socket = SmartSocket::new(String::from("Розетка"), 0.0, OnOff::Off);
         let socket_data = match socket.get_data().await {
-            DeviceResponseData::Socket(s) => s,
+            DeviceData::Socket(s) => s,
             _ => panic!("Неверный тип устройства"),
         };
         assert_eq!(socket_data.power, 0.0);
@@ -143,7 +143,7 @@ mod tests {
     async fn socket_power() {
         let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
         let socket_data = match socket.get_data().await {
-            DeviceResponseData::Socket(s) => s,
+            DeviceData::Socket(s) => s,
             _ => panic!("Неверный тип устройства"),
         };
         assert_eq!(socket_data.power, 1000.0);

@@ -12,7 +12,7 @@ use crate::{
     errors::SmartHomeErrors,
     smart_device::{
         SmartDevice, SmartDeviceType,
-        contracts::{Commands, DecodeEncode, DeviceResponse, DeviceResponseData},
+        contracts::{Commands, DecodeEncode, DeviceData, DeviceResponse},
     },
 };
 
@@ -41,7 +41,7 @@ impl ConnectionType {
     }
 }
 
-fn decode_result(message: Vec<u8>) -> Result<Option<DeviceResponseData>, SmartHomeErrors> {
+fn decode_result(message: Vec<u8>) -> Result<Option<DeviceData>, SmartHomeErrors> {
     let decode_result = DeviceResponse::decode(&message);
 
     if let Err(e) = decode_result {
@@ -62,7 +62,7 @@ fn decode_result(message: Vec<u8>) -> Result<Option<DeviceResponseData>, SmartHo
 async fn send_command(
     stream: &Arc<Mutex<TcpStream>>,
     cmd: Commands,
-) -> Result<Option<DeviceResponseData>, anyhow::Error> {
+) -> Result<Option<DeviceData>, anyhow::Error> {
     let mut stream = stream.lock().await;
     let (reader, mut writer) = stream.split();
     let mut reader = BufReader::new(reader);
@@ -97,7 +97,7 @@ async fn send_command(
 
 async fn start_tcp_monitoring<Fut, F>(stream: Arc<tokio::sync::Mutex<TcpStream>>, mut callback: F)
 where
-    F: FnMut(DeviceResponseData) -> Fut + Send + 'static,
+    F: FnMut(DeviceData) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
     tokio::spawn(async move {
@@ -129,7 +129,7 @@ where
 
 async fn start_udp_monitoring<Fut, F>(socket: Arc<Mutex<UdpSocket>>, mut callback: F)
 where
-    F: FnMut(DeviceResponseData) -> Fut + Send + 'static,
+    F: FnMut(DeviceData) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
     tokio::spawn(async move {

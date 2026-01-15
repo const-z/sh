@@ -8,26 +8,26 @@ use crate::{
 const ENCODING_CONFIG: Configuration = bincode::config::standard();
 
 #[derive(Clone, Debug, Encode, Decode)]
-pub enum DeviceResponseData {
+pub enum DeviceData {
     Socket(SocketData),
     Thermometer(ThermometerData),
 }
 
-impl DeviceResponseData {
-    pub fn update(&mut self, data: DeviceResponseData) {
+impl DeviceData {
+    pub fn update(&mut self, data: DeviceData) {
         *self = data;
     }
 
     pub fn as_socket(&self) -> SocketData {
         match self {
-            DeviceResponseData::Socket(s) => s.clone(),
+            DeviceData::Socket(s) => s.clone(),
             _ => panic!("Неверный тип устройства"),
         }
     }
 
     pub fn as_thermometer(self) -> ThermometerData {
         match self {
-            DeviceResponseData::Thermometer(s) => s,
+            DeviceData::Thermometer(s) => s,
             _ => panic!("Неверный тип устройства"),
         }
     }
@@ -35,7 +35,7 @@ impl DeviceResponseData {
 
 #[derive(Clone, Debug, Encode, Decode)]
 pub struct DeviceResponse {
-    pub data: Option<DeviceResponseData>,
+    pub data: Option<DeviceData>,
     pub success: bool,
     pub error: Option<String>,
 }
