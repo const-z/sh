@@ -1,15 +1,44 @@
-use std::collections::HashMap;
+use core::fmt;
 use std::fmt::Write;
+use std::{collections::HashMap, vec};
 
 use crate::{
     reporter::Report,
     smart_device::{SmartDevice, SmartDeviceType},
+    subscriber::Subscribe,
 };
 
-#[derive(Clone, Debug)]
 pub struct SmartRoom {
     name: String,
     devices: HashMap<String, SmartDeviceType>,
+    subscribers: Vec<Box<dyn Subscribe>>,
+}
+
+impl Subscribe for SmartRoom {
+    fn on_event(&mut self, name: String) {
+        for subscriber in self.subscribers.iter_mut() {
+            subscriber.on_event(name.clone());
+        }
+    }
+}
+
+impl Clone for SmartRoom {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            devices: self.devices.clone(),
+            subscribers: vec![],
+        }
+    }
+}
+
+impl fmt::Debug for SmartRoom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SmartRoom")
+            .field("name", &self.name)
+            .field("devices", &self.devices)
+            .finish()
+    }
 }
 
 impl SmartRoom {
@@ -18,6 +47,7 @@ impl SmartRoom {
         Self {
             name: name.into(),
             devices: HashMap::from_iter(devices.iter().map(|d| (d.get_name().clone(), d.clone()))),
+            subscribers: vec![],
         }
     }
 
@@ -49,26 +79,43 @@ impl SmartRoom {
     where
         T: SmartDevice + Into<SmartDeviceType>,
     {
-        self.devices
-            .insert(String::from(device.get_name()), device.into());
+        let device_name = device.get_name().clone();
+
+        self.devices.insert(device_name.clone(), device.into());
+
+        for subscriber in &mut self.subscribers {
+            subscriber.on_event(device_name.clone());
+        }
     }
 
     /// Удалить устройство из комнаты
     pub fn del_device(&mut self, device_name: &str) {
         self.devices.remove(device_name);
     }
+
+    pub fn subscribe<S>(&mut self, subscriber: S)
+    where
+        S: Subscribe + 'static,
+    {
+        self.subscribers.push(Box::new(subscriber));
+    }
 }
 
 impl Report for SmartRoom {
     /// Вывести отчет о состоянии комнаты
     async fn get_status_report(&self) -> String {
-        let mut output = format!(r#"Отчет по комнате "{}"{}"#, self.name, "\n");
+        let name = self.name.clone();
+        let devices = self.devices.clone();
+        async move {
+            let mut output = format!(r#"Отчет по комнате "{}"{}"#, name, "\n");
 
-        for (i, device) in self.devices.values().enumerate() {
-            writeln!(output, "{}. {}", i + 1, device.get_status_report().await).unwrap();
+            for (i, device) in devices.values().enumerate() {
+                writeln!(output, "{}. {}", i + 1, device.get_status_report().await).unwrap();
+            }
+
+            output
         }
-
-        output
+        .await
     }
 }
 

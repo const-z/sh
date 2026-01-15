@@ -1,13 +1,13 @@
 use crate::{smart_device::SmartDeviceType, smart_home::SmartHome, smart_room::SmartRoom};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct HomeBuilder {
     rooms: Vec<SmartRoom>,
 }
 
 impl HomeBuilder {
     pub fn new() -> Self {
-        Self { rooms: Vec::new() }
+        Self::default()
     }
 
     pub fn add_room(self, room_name: String) -> RoomBuilder {

@@ -1,8 +1,8 @@
 pub trait Report {
-    fn get_status_report(&self) -> impl std::future::Future<Output = String> + Send;
+    fn get_status_report(&self) -> impl std::future::Future<Output = String>;
 }
 
-impl<T: Report + Send + Sync> Report for &T {
+impl<T: Report> Report for &T {
     async fn get_status_report(&self) -> String {
         T::get_status_report(self).await
     }
@@ -18,15 +18,21 @@ impl Reporter<Identity> {
     }
 }
 
+impl Default for Reporter<Identity> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Reporter<T> {
-    pub fn add<U: Report>(self, item: U) -> Reporter<Both<T, U>> {
+    pub fn add_item<U: Report>(self, item: U) -> Reporter<Both<T, U>> {
         Reporter {
             inner: Both::new(self.inner, item),
         }
     }
 }
 
-impl<T: Report + Send + Sync> Report for Reporter<T> {
+impl<T: Report> Report for Reporter<T> {
     async fn get_status_report(&self) -> String {
         self.inner.get_status_report().await
     }
@@ -51,7 +57,7 @@ impl<R1, R2> Both<R1, R2> {
     }
 }
 
-impl<R1: Report + Send + Sync, R2: Report + Send + Sync> Report for Both<R1, R2> {
+impl<R1: Report, R2: Report> Report for Both<R1, R2> {
     async fn get_status_report(&self) -> String {
         let part1 = self.inner1.get_status_report().await;
         let part2 = self.inner2.get_status_report().await;

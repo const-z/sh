@@ -4,6 +4,7 @@ pub mod reporter;
 pub mod smart_device;
 pub mod smart_home;
 pub mod smart_room;
+pub mod subscriber;
 
 /// Макрос для создания комнат
 #[macro_export]

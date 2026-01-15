@@ -14,9 +14,9 @@ pub struct SmartHome {
 
 impl SmartHome {
     /// Создать дом
-    pub fn new(name: String, rooms: &[SmartRoom]) -> Self {
+    pub fn new(name: impl Into<String>, rooms: &[SmartRoom]) -> Self {
         Self {
-            name,
+            name: name.into(),
             rooms: HashMap::from_iter(
                 rooms
                     .iter()
@@ -73,15 +73,18 @@ impl SmartHome {
 
 impl Report for SmartHome {
     async fn get_status_report(&self) -> String {
-        let mut output = format!(r#"Отчет по дому "{}"{}"#, self.name, "\n");
+        let name = self.name.clone();
+        let rooms = self.rooms.values().clone();
+        async move {
+            let mut output = format!(r#"Отчет по дому "{}"{}"#, name, "\n");
 
-        for room in self.rooms.values() {
-            write!(output, "{}", room.get_status_report().await).unwrap();
+            for room in rooms {
+                write!(output, "{}", room.get_status_report().await).unwrap();
+            }
+
+            output
         }
-
-        write!(output, r#"Конец отчета по дому "{}""#, self.name).unwrap();
-
-        output
+        .await
     }
 }
 

@@ -55,10 +55,32 @@ fn main() {
 Вызов метода report() должен выводить в терминал отчёт обо всех добавленных объектах.
 
 ### Observer
+
 Добавить возможность добавления callback-ов в объект комнаты, которые срабатывают при добавлении новых устройств в комнату (паттерн Observer).
 
 Использовать динамический полиморфизм (трейт-объекты).
 Можно передавать как объект-subscriber, так и замыкание: https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=06e9dc9bcce297d1e80a22d7e9338ee8.
+
+```rust
+fn main() {
+    let mut room = Room::default();
+    room.subscribe(MySubscriber::default());
+    room.subscribe(|device| execute_for_added_device(...));
+}
+
+trait Subscriber {
+    fn on_event(&mut self);
+}
+
+struct MySubscriber {
+    // ...
+}
+
+impl Subscriber for MySubscriber {
+    // ...
+}
+```
+
 Добавить example-ы, демонстрирующие новый функционал.
 
 ## Критерии оценки
