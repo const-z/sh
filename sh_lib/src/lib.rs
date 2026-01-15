@@ -1,3 +1,4 @@
+pub mod builder;
 pub mod errors;
 pub mod smart_device;
 pub mod smart_home;

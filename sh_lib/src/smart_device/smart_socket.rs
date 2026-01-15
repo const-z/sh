@@ -30,7 +30,7 @@ impl SocketData {
 #[derive(Clone, Debug)]
 pub struct SmartSocket {
     name: String,
-    pub value: Arc<RwLock<SocketData>>,
+    pub value: Arc<RwLock<DeviceResponseData>>,
     pub connection: Option<ConnectionType>,
 }
 
@@ -38,7 +38,10 @@ impl SmartSocket {
     pub fn new(name: String, power: f32, is_on: OnOff) -> Self {
         Self {
             name,
-            value: Arc::new(RwLock::new(SocketData::new(power, is_on == OnOff::On))),
+            value: Arc::new(RwLock::new(DeviceResponseData::Socket(SocketData::new(
+                power,
+                is_on == OnOff::On,
+            )))),
             connection: None,
         }
     }
@@ -51,7 +54,10 @@ impl SmartSocket {
     ) -> Self {
         Self {
             name,
-            value: Arc::new(RwLock::new(SocketData::new(power, is_on == OnOff::On))),
+            value: Arc::new(RwLock::new(DeviceResponseData::Socket(SocketData::new(
+                power,
+                is_on == OnOff::On,
+            )))),
             connection: Some(connection),
         }
     }
@@ -59,20 +65,26 @@ impl SmartSocket {
     /// Включить розетку
     pub async fn turn_on(&mut self) {
         let mut value = self.value.write().await;
-        value.is_on = true;
-        value.timestamp = chrono::Utc::now().timestamp_millis();
+        let current_data = value.clone().as_socket();
+        value.update(DeviceResponseData::Socket(SocketData::new(
+            current_data.power,
+            true,
+        )));
     }
 
     /// Выключить розетку
     pub async fn turn_off(&mut self) {
         let mut value = self.value.write().await;
-        value.is_on = false;
-        value.timestamp = chrono::Utc::now().timestamp_millis();
+        let current_data = value.clone().as_socket();
+        value.update(DeviceResponseData::Socket(SocketData::new(
+            current_data.power,
+            false,
+        )));
     }
 
     /// Проверить, включена ли розетка
     pub async fn is_on(&self) -> bool {
-        self.value.read().await.is_on
+        self.value.read().await.as_socket().is_on
     }
 }
 
@@ -82,25 +94,7 @@ impl SmartDevice for SmartSocket {
     }
 
     async fn get_data(&self) -> DeviceResponseData {
-        let value = self.value.read().await;
-        DeviceResponseData::Socket(SocketData {
-            power: value.power,
-            is_on: value.is_on,
-            timestamp: value.timestamp,
-        })
-    }
-
-    /// Обновить данные розетки
-    async fn update(&mut self, data: DeviceResponseData) {
-        let data = match data {
-            DeviceResponseData::Socket(s) => s,
-            _ => panic!("Неверный тип устройства"),
-        };
-
-        let mut value = self.value.write().await;
-        value.power = data.power;
-        value.is_on = data.is_on;
-        value.timestamp = data.timestamp;
+        self.value.read().await.clone()
     }
 
     fn get_connection(&self) -> Option<&ConnectionType> {
@@ -111,7 +105,7 @@ impl SmartDevice for SmartSocket {
 impl Report for SmartSocket {
     /// Получить статус розетки
     async fn get_status_report(&self) -> String {
-        let value = self.value.read().await;
+        let value = self.value.read().await.as_socket();
         format!(
             "{}: {}",
             self.name,

@@ -203,12 +203,7 @@ impl OnlineDevice for SmartDeviceType {
                                 start_tcp_monitoring(Arc::new(Mutex::new(s)), move |data| {
                                     let value = value.clone();
                                     async move {
-                                        if let DeviceResponseData::Socket(data) = data {
-                                            let mut value = value.write().await;
-                                            value.power = data.power;
-                                            value.is_on = data.is_on;
-                                            value.timestamp = data.timestamp;
-                                        }
+                                        value.write().await.update(data);
                                     }
                                 })
                                 .await
@@ -236,11 +231,7 @@ impl OnlineDevice for SmartDeviceType {
                                 start_udp_monitoring(Arc::new(Mutex::new(s)), move |data| {
                                     let value = value.clone();
                                     async move {
-                                        if let DeviceResponseData::Thermometer(data) = data {
-                                            let mut value = value.write().await;
-                                            value.temp = data.temp;
-                                            value.timestamp = data.timestamp;
-                                        }
+                                        value.write().await.update(data);
                                     }
                                 })
                                 .await

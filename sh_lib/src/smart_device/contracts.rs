@@ -13,6 +13,26 @@ pub enum DeviceResponseData {
     Thermometer(ThermometerData),
 }
 
+impl DeviceResponseData {
+    pub fn update(&mut self, data: DeviceResponseData) {
+        *self = data;
+    }
+
+    pub fn as_socket(&self) -> SocketData {
+        match self {
+            DeviceResponseData::Socket(s) => s.clone(),
+            _ => panic!("Неверный тип устройства"),
+        }
+    }
+
+    pub fn as_thermometer(self) -> ThermometerData {
+        match self {
+            DeviceResponseData::Thermometer(s) => s,
+            _ => panic!("Неверный тип устройства"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Encode, Decode)]
 pub struct DeviceResponse {
     pub data: Option<DeviceResponseData>,
