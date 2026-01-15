@@ -1,5 +1,6 @@
 use crate::errors::SmartHomeErrors;
-use crate::{Report, smart_device::SmartDeviceType, smart_room::SmartRoom};
+use crate::reporter::Report;
+use crate::{smart_device::SmartDeviceType, smart_room::SmartRoom};
 use core::str;
 use std::collections::HashMap;
 use std::fmt::Write;

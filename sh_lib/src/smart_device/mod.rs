@@ -7,7 +7,7 @@ pub use smart_socket::SmartSocket;
 pub use smart_thermometer::SmartThermometer;
 
 use crate::{
-    Report,
+    reporter::Report,
     smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
@@ -18,15 +18,6 @@ pub enum SmartDeviceType {
     Thermometer(SmartThermometer),
     /// Умная розетка
     Socket(SmartSocket),
-}
-
-/// Состояние устройства
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum OnOff {
-    /// Включено
-    On,
-    /// Выключено
-    Off,
 }
 
 /// Умное устройство

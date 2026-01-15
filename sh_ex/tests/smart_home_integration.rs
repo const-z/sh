@@ -1,5 +1,5 @@
 use sh_lib::create_room;
-use sh_lib::smart_device::{OnOff, SmartSocket, SmartThermometer};
+use sh_lib::smart_device::{SmartSocket, SmartThermometer};
 use sh_lib::smart_home::SmartHome;
 use sh_lib::smart_room::SmartRoom;
 
@@ -21,7 +21,7 @@ fn create_room_with_macros() {
     let room = create_room!(
         "Комната",
         SmartThermometer::new(String::from("Термометр"), 24.0),
-        SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On)
+        SmartSocket::new(String::from("Розетка"), 1000.0, true)
     );
     let home = SmartHome::new(String::from("Дом"), &[room]);
     let room_ref = home.get_room("Комната");
@@ -39,6 +39,6 @@ fn add_thermometer_to_room() {
 #[test]
 fn add_socket_to_room() {
     let mut room = SmartRoom::new(String::from("Комната"), &[]);
-    room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On));
+    room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, true));
     assert_eq!(room.get_devices().len(), 1);
 }

@@ -4,11 +4,11 @@ use bincode::{Decode, Encode};
 use tokio::sync::RwLock;
 
 use crate::{
-    Report,
+    reporter::Report,
     smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
-use super::{OnOff, SmartDevice, SmartDeviceType};
+use super::{SmartDevice, SmartDeviceType};
 
 #[derive(Clone, Debug, Encode, Decode)]
 pub struct SocketData {
@@ -35,12 +35,11 @@ pub struct SmartSocket {
 }
 
 impl SmartSocket {
-    pub fn new(name: String, power: f32, is_on: OnOff) -> Self {
+    pub fn new(name: impl Into<String>, power: f32, is_on: bool) -> Self {
         Self {
-            name,
+            name: name.into(),
             value: Arc::new(RwLock::new(DeviceData::Socket(SocketData::new(
-                power,
-                is_on == OnOff::On,
+                power, is_on,
             )))),
             connection: None,
         }
@@ -49,14 +48,13 @@ impl SmartSocket {
     pub fn new_with_connection(
         name: String,
         power: f32,
-        is_on: OnOff,
+        is_on: bool,
         connection: ConnectionType,
     ) -> Self {
         Self {
             name,
             value: Arc::new(RwLock::new(DeviceData::Socket(SocketData::new(
-                power,
-                is_on == OnOff::On,
+                power, is_on,
             )))),
             connection: Some(connection),
         }
@@ -131,7 +129,7 @@ mod tests {
 
     #[tokio::test]
     async fn socket_power_zero_if_off() {
-        let socket = SmartSocket::new(String::from("Розетка"), 0.0, OnOff::Off);
+        let socket = SmartSocket::new(String::from("Розетка"), 0.0, false);
         let socket_data = match socket.get_data().await {
             DeviceData::Socket(s) => s,
             _ => panic!("Неверный тип устройства"),
@@ -141,7 +139,7 @@ mod tests {
 
     #[tokio::test]
     async fn socket_power() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, true);
         let socket_data = match socket.get_data().await {
             DeviceData::Socket(s) => s,
             _ => panic!("Неверный тип устройства"),
@@ -151,39 +149,39 @@ mod tests {
 
     #[tokio::test]
     async fn socket_status() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, true);
         assert_eq!(socket.get_status_report().await, "Розетка: Вкл, 1000 Вт");
     }
 
     #[tokio::test]
     async fn socket_status_off() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, false);
         assert_eq!(socket.get_status_report().await, "Розетка: Выкл");
     }
 
     #[tokio::test]
     async fn socket_turn_on() {
-        let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
+        let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, false);
         socket.turn_on().await;
         assert_eq!(socket.get_status_report().await, "Розетка: Вкл, 1000 Вт");
     }
 
     #[tokio::test]
     async fn socket_turn_off() {
-        let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
+        let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, true);
         socket.turn_off().await;
         assert_eq!(socket.get_status_report().await, "Розетка: Выкл");
     }
 
     #[tokio::test]
     async fn socket_is_on_true() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, true);
         assert!(socket.is_on().await);
     }
 
     #[tokio::test]
     async fn socket_is_on_false() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, false);
         assert!(!socket.is_on().await);
     }
 }

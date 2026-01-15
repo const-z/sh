@@ -1,9 +1,10 @@
 use std::process::Stdio;
 
 use sh_lib::{
-    Report, create_room,
+    create_room,
+    reporter::Report,
     smart_device::{
-        OnOff, SmartSocket, SmartThermometer,
+        SmartSocket, SmartThermometer,
         online::{ConnectionType, OnlineDevice},
     },
     smart_home::SmartHome,
@@ -29,7 +30,7 @@ fn make_home() -> SmartHome {
                 SmartSocket::new_with_connection(
                     String::from("Розетка 1.1"),
                     1000.0,
-                    OnOff::On,
+                    true,
                     ConnectionType::Tcp {
                         ip: "127.0.0.1".parse().unwrap(),
                         port: 3001,
@@ -38,7 +39,7 @@ fn make_home() -> SmartHome {
                 SmartSocket::new_with_connection(
                     String::from("Розетка 1.2"),
                     2000.0,
-                    OnOff::Off,
+                    false,
                     ConnectionType::Tcp {
                         ip: "127.0.0.1".parse().unwrap(),
                         port: 3001,
@@ -47,7 +48,7 @@ fn make_home() -> SmartHome {
                 SmartSocket::new_with_connection(
                     String::from("Розетка 1.3"),
                     1100.25,
-                    OnOff::On,
+                    true,
                     ConnectionType::Tcp {
                         ip: "127.0.0.1".parse().unwrap(),
                         port: 3001,
@@ -64,7 +65,7 @@ fn make_home() -> SmartHome {
                 SmartSocket::new_with_connection(
                     String::from("Розетка 2.1"),
                     1000.0,
-                    OnOff::On,
+                    true,
                     ConnectionType::Tcp {
                         ip: "127.0.0.1".parse().unwrap(),
                         port: 3001,
@@ -73,7 +74,7 @@ fn make_home() -> SmartHome {
                 SmartSocket::new_with_connection(
                     String::from("Розетка 2.2"),
                     2000.0,
-                    OnOff::Off,
+                    false,
                     ConnectionType::Tcp {
                         ip: "127.0.0.1".parse().unwrap(),
                         port: 3001,
@@ -82,7 +83,7 @@ fn make_home() -> SmartHome {
                 SmartSocket::new_with_connection(
                     String::from("Розетка 2.3"),
                     1100.25,
-                    OnOff::On,
+                    true,
                     ConnectionType::Tcp {
                         ip: "127.0.0.1".parse().unwrap(),
                         port: 3001,

@@ -4,7 +4,7 @@ use bincode::{Decode, Encode};
 use tokio::sync::RwLock;
 
 use crate::{
-    Report,
+    reporter::Report,
     smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
@@ -33,9 +33,9 @@ impl ThermometerData {
 }
 
 impl SmartThermometer {
-    pub fn new(name: String, temp: f32) -> Self {
+    pub fn new(name: impl Into<String>, temp: f32) -> Self {
         Self {
-            name,
+            name: name.into(),
             value: Arc::new(RwLock::new(DeviceData::Thermometer(ThermometerData::new(
                 temp,
             )))),

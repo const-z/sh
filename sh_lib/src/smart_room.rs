@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Write;
 
 use crate::{
-    Report,
+    reporter::Report,
     smart_device::{SmartDevice, SmartDeviceType},
 };
 
@@ -14,9 +14,9 @@ pub struct SmartRoom {
 
 impl SmartRoom {
     /// Создать комнату
-    pub fn new(name: String, devices: &[SmartDeviceType]) -> Self {
+    pub fn new(name: impl Into<String>, devices: &[SmartDeviceType]) -> Self {
         Self {
-            name,
+            name: name.into(),
             devices: HashMap::from_iter(devices.iter().map(|d| (d.get_name().clone(), d.clone()))),
         }
     }
@@ -75,13 +75,13 @@ impl Report for SmartRoom {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::smart_device::{OnOff, SmartSocket, SmartThermometer};
+    use crate::smart_device::{SmartSocket, SmartThermometer};
 
     #[tokio::test]
     async fn add_device() {
         let mut room = SmartRoom::new(String::from("Комната"), &[]);
         room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
-        room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On));
+        room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, true));
 
         assert_eq!(
             room.get_device("Термометр")
@@ -103,7 +103,7 @@ mod tests {
     async fn get_mut_device() {
         let mut room = SmartRoom::new(String::from("Комната"), &[]);
         room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
-        room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On));
+        room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, true));
 
         let device = room.get_device_mut("Термометр").unwrap();
 

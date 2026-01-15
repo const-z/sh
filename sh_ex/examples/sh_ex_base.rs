@@ -1,6 +1,6 @@
-use sh_lib::smart_device::{OnOff, SmartDeviceType, SmartSocket, SmartThermometer};
+use sh_lib::smart_device::{SmartDeviceType, SmartSocket, SmartThermometer};
 use sh_lib::smart_home::SmartHome;
-use sh_lib::{Report, create_room};
+use sh_lib::{create_room, reporter::Report};
 
 /// Функция, которая принимает любой объект, умеющий выводить отчёт
 pub async fn print_status_report(smart_object: &impl Report) {
@@ -14,16 +14,16 @@ fn make_home() -> SmartHome {
             create_room!(
                 "Кухня",
                 SmartThermometer::new(String::from("Термометр 1.1"), 24.0),
-                SmartSocket::new(String::from("Розетка 1.1"), 1000.0, OnOff::On),
-                SmartSocket::new(String::from("Розетка 1.2"), 2000.0, OnOff::Off),
-                SmartSocket::new(String::from("Розетка 1.3"), 1100.25, OnOff::On)
+                SmartSocket::new(String::from("Розетка 1.1"), 1000.0, true),
+                SmartSocket::new(String::from("Розетка 1.2"), 2000.0, false),
+                SmartSocket::new(String::from("Розетка 1.3"), 1100.25, true)
             ),
             create_room!(
                 "Кабинет",
                 SmartThermometer::new(String::from("Термометр 2.1"), 20.0),
-                SmartSocket::new(String::from("Розетка 2.1"), 1000.0, OnOff::On),
-                SmartSocket::new(String::from("Розетка 2.2"), 2000.0, OnOff::Off),
-                SmartSocket::new(String::from("Розетка 2.3"), 1100.25, OnOff::On)
+                SmartSocket::new(String::from("Розетка 2.1"), 1000.0, true),
+                SmartSocket::new(String::from("Розетка 2.2"), 2000.0, false),
+                SmartSocket::new(String::from("Розетка 2.3"), 1100.25, true)
             ),
         ],
     )
