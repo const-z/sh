@@ -4,8 +4,8 @@ use bincode::{Decode, Encode};
 use tokio::sync::RwLock;
 
 use crate::{
-    Report,
-    smart_device::{contracts::DeviceResponseData, online::ConnectionType},
+    reporter::Report,
+    smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
 use super::{SmartDevice, SmartDeviceType};
@@ -13,7 +13,7 @@ use super::{SmartDevice, SmartDeviceType};
 #[derive(Clone, Debug)]
 pub struct SmartThermometer {
     name: String,
-    pub value: Arc<RwLock<ThermometerData>>,
+    pub value: Arc<RwLock<DeviceData>>,
     pub connection: Option<ConnectionType>,
 }
 
@@ -33,10 +33,12 @@ impl ThermometerData {
 }
 
 impl SmartThermometer {
-    pub fn new(name: String, temp: f32) -> Self {
+    pub fn new(name: impl Into<String>, temp: f32) -> Self {
         Self {
-            name,
-            value: Arc::new(RwLock::new(ThermometerData::new(temp))),
+            name: name.into(),
+            value: Arc::new(RwLock::new(DeviceData::Thermometer(ThermometerData::new(
+                temp,
+            )))),
             connection: None,
         }
     }
@@ -44,19 +46,20 @@ impl SmartThermometer {
     pub fn new_with_connection(name: String, temp: f32, connection: ConnectionType) -> Self {
         Self {
             name,
-            value: Arc::new(RwLock::new(ThermometerData::new(temp))),
+            value: Arc::new(RwLock::new(DeviceData::Thermometer(ThermometerData::new(
+                temp,
+            )))),
             connection: Some(connection),
         }
     }
 
     pub async fn get_temp(&self) -> f32 {
-        self.value.read().await.temp
+        self.value.read().await.clone().as_thermometer().temp
     }
 
     pub async fn set_temp(&mut self, temp: f32) {
         let mut value = self.value.write().await;
-        value.temp = temp;
-        value.timestamp = chrono::Utc::now().timestamp_millis();
+        value.update(DeviceData::Thermometer(ThermometerData::new(temp)));
     }
 }
 
@@ -65,23 +68,8 @@ impl SmartDevice for SmartThermometer {
         &self.name
     }
 
-    async fn get_data(&self) -> DeviceResponseData {
-        let value = self.value.read().await;
-        super::contracts::DeviceResponseData::Thermometer(ThermometerData {
-            temp: value.temp,
-            timestamp: value.timestamp,
-        })
-    }
-
-    async fn update(&mut self, data: DeviceResponseData) {
-        let data = match data {
-            super::contracts::DeviceResponseData::Thermometer(t) => t,
-            _ => panic!("Неверный тип устройства"),
-        };
-
-        let mut value = self.value.write().await;
-        value.temp = data.temp;
-        value.timestamp = data.timestamp;
+    async fn get_data(&self) -> DeviceData {
+        self.value.read().await.clone()
     }
 
     fn get_connection(&self) -> Option<&ConnectionType> {
@@ -92,7 +80,8 @@ impl SmartDevice for SmartThermometer {
 impl Report for SmartThermometer {
     /// Получить статус термометра
     async fn get_status_report(&self) -> String {
-        format!("{}: {} C°", self.name, self.value.read().await.temp)
+        let value = self.value.read().await.clone().as_thermometer();
+        format!("{}: {} C°", self.name, value.temp)
     }
 }
 

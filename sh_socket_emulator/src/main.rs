@@ -1,6 +1,6 @@
 use dotenv::dotenv;
 use sh_lib::smart_device::contracts::{Commands, DecodeEncode, DeviceResponse};
-use sh_lib::smart_device::{OnOff, SmartDevice, SmartSocket};
+use sh_lib::smart_device::{SmartDevice, SmartSocket};
 use std::env;
 use std::error::Error;
 use std::sync::Arc;
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let socket_arc = Arc::new(RwLock::new(SmartSocket::new(
         format!("Розетка SN: {}", DEVICE_ID),
         0.0,
-        OnOff::Off,
+        false,
     )));
 
     let listen_addr = format!("0.0.0.0:{}", port);

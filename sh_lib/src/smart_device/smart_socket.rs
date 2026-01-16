@@ -4,11 +4,11 @@ use bincode::{Decode, Encode};
 use tokio::sync::RwLock;
 
 use crate::{
-    Report,
-    smart_device::{contracts::DeviceResponseData, online::ConnectionType},
+    reporter::Report,
+    smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
-use super::{OnOff, SmartDevice, SmartDeviceType};
+use super::{SmartDevice, SmartDeviceType};
 
 #[derive(Clone, Debug, Encode, Decode)]
 pub struct SocketData {
@@ -30,15 +30,17 @@ impl SocketData {
 #[derive(Clone, Debug)]
 pub struct SmartSocket {
     name: String,
-    pub value: Arc<RwLock<SocketData>>,
+    pub value: Arc<RwLock<DeviceData>>,
     pub connection: Option<ConnectionType>,
 }
 
 impl SmartSocket {
-    pub fn new(name: String, power: f32, is_on: OnOff) -> Self {
+    pub fn new(name: impl Into<String>, power: f32, is_on: bool) -> Self {
         Self {
-            name,
-            value: Arc::new(RwLock::new(SocketData::new(power, is_on == OnOff::On))),
+            name: name.into(),
+            value: Arc::new(RwLock::new(DeviceData::Socket(SocketData::new(
+                power, is_on,
+            )))),
             connection: None,
         }
     }
@@ -46,12 +48,14 @@ impl SmartSocket {
     pub fn new_with_connection(
         name: String,
         power: f32,
-        is_on: OnOff,
+        is_on: bool,
         connection: ConnectionType,
     ) -> Self {
         Self {
             name,
-            value: Arc::new(RwLock::new(SocketData::new(power, is_on == OnOff::On))),
+            value: Arc::new(RwLock::new(DeviceData::Socket(SocketData::new(
+                power, is_on,
+            )))),
             connection: Some(connection),
         }
     }
@@ -59,20 +63,26 @@ impl SmartSocket {
     /// Включить розетку
     pub async fn turn_on(&mut self) {
         let mut value = self.value.write().await;
-        value.is_on = true;
-        value.timestamp = chrono::Utc::now().timestamp_millis();
+        let current_data = value.clone().as_socket();
+        value.update(DeviceData::Socket(SocketData::new(
+            current_data.power,
+            true,
+        )));
     }
 
     /// Выключить розетку
     pub async fn turn_off(&mut self) {
         let mut value = self.value.write().await;
-        value.is_on = false;
-        value.timestamp = chrono::Utc::now().timestamp_millis();
+        let current_data = value.clone().as_socket();
+        value.update(DeviceData::Socket(SocketData::new(
+            current_data.power,
+            false,
+        )));
     }
 
     /// Проверить, включена ли розетка
     pub async fn is_on(&self) -> bool {
-        self.value.read().await.is_on
+        self.value.read().await.as_socket().is_on
     }
 }
 
@@ -81,26 +91,8 @@ impl SmartDevice for SmartSocket {
         &self.name
     }
 
-    async fn get_data(&self) -> DeviceResponseData {
-        let value = self.value.read().await;
-        DeviceResponseData::Socket(SocketData {
-            power: value.power,
-            is_on: value.is_on,
-            timestamp: value.timestamp,
-        })
-    }
-
-    /// Обновить данные розетки
-    async fn update(&mut self, data: DeviceResponseData) {
-        let data = match data {
-            DeviceResponseData::Socket(s) => s,
-            _ => panic!("Неверный тип устройства"),
-        };
-
-        let mut value = self.value.write().await;
-        value.power = data.power;
-        value.is_on = data.is_on;
-        value.timestamp = data.timestamp;
+    async fn get_data(&self) -> DeviceData {
+        self.value.read().await.clone()
     }
 
     fn get_connection(&self) -> Option<&ConnectionType> {
@@ -111,7 +103,7 @@ impl SmartDevice for SmartSocket {
 impl Report for SmartSocket {
     /// Получить статус розетки
     async fn get_status_report(&self) -> String {
-        let value = self.value.read().await;
+        let value = self.value.read().await.as_socket();
         format!(
             "{}: {}",
             self.name,
@@ -131,15 +123,15 @@ impl From<SmartSocket> for SmartDeviceType {
 
 #[cfg(test)]
 mod tests {
-    use crate::smart_device::contracts::DeviceResponseData;
+    use crate::smart_device::contracts::DeviceData;
 
     use super::*;
 
     #[tokio::test]
     async fn socket_power_zero_if_off() {
-        let socket = SmartSocket::new(String::from("Розетка"), 0.0, OnOff::Off);
+        let socket = SmartSocket::new(String::from("Розетка"), 0.0, false);
         let socket_data = match socket.get_data().await {
-            DeviceResponseData::Socket(s) => s,
+            DeviceData::Socket(s) => s,
             _ => panic!("Неверный тип устройства"),
         };
         assert_eq!(socket_data.power, 0.0);
@@ -147,9 +139,9 @@ mod tests {
 
     #[tokio::test]
     async fn socket_power() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, true);
         let socket_data = match socket.get_data().await {
-            DeviceResponseData::Socket(s) => s,
+            DeviceData::Socket(s) => s,
             _ => panic!("Неверный тип устройства"),
         };
         assert_eq!(socket_data.power, 1000.0);
@@ -157,39 +149,39 @@ mod tests {
 
     #[tokio::test]
     async fn socket_status() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, true);
         assert_eq!(socket.get_status_report().await, "Розетка: Вкл, 1000 Вт");
     }
 
     #[tokio::test]
     async fn socket_status_off() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, false);
         assert_eq!(socket.get_status_report().await, "Розетка: Выкл");
     }
 
     #[tokio::test]
     async fn socket_turn_on() {
-        let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
+        let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, false);
         socket.turn_on().await;
         assert_eq!(socket.get_status_report().await, "Розетка: Вкл, 1000 Вт");
     }
 
     #[tokio::test]
     async fn socket_turn_off() {
-        let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
+        let mut socket = SmartSocket::new(String::from("Розетка"), 1000.0, true);
         socket.turn_off().await;
         assert_eq!(socket.get_status_report().await, "Розетка: Выкл");
     }
 
     #[tokio::test]
     async fn socket_is_on_true() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::On);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, true);
         assert!(socket.is_on().await);
     }
 
     #[tokio::test]
     async fn socket_is_on_false() {
-        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, OnOff::Off);
+        let socket = SmartSocket::new(String::from("Розетка"), 1000.0, false);
         assert!(!socket.is_on().await);
     }
 }

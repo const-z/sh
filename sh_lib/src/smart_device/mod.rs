@@ -7,8 +7,8 @@ pub use smart_socket::SmartSocket;
 pub use smart_thermometer::SmartThermometer;
 
 use crate::{
-    Report,
-    smart_device::{contracts::DeviceResponseData, online::ConnectionType},
+    reporter::Report,
+    smart_device::{contracts::DeviceData, online::ConnectionType},
 };
 
 /// Тип умного устройства
@@ -20,20 +20,10 @@ pub enum SmartDeviceType {
     Socket(SmartSocket),
 }
 
-/// Состояние устройства
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum OnOff {
-    /// Включено
-    On,
-    /// Выключено
-    Off,
-}
-
 /// Умное устройство
 pub trait SmartDevice {
     fn get_name(&self) -> &String;
-    fn get_data(&self) -> impl Future<Output = DeviceResponseData>;
-    fn update(&mut self, data: DeviceResponseData) -> impl Future<Output = ()>;
+    fn get_data(&self) -> impl Future<Output = DeviceData>;
     fn get_connection(&self) -> Option<&ConnectionType>;
 }
 
@@ -45,19 +35,13 @@ impl SmartDevice for SmartDeviceType {
         }
     }
 
-    async fn get_data(&self) -> DeviceResponseData {
+    async fn get_data(&self) -> DeviceData {
         match self {
             SmartDeviceType::Socket(s) => s.get_data().await,
             SmartDeviceType::Thermometer(t) => t.get_data().await,
         }
     }
 
-    async fn update(&mut self, data: DeviceResponseData) {
-        match self {
-            SmartDeviceType::Socket(s) => s.update(data).await,
-            SmartDeviceType::Thermometer(t) => t.update(data).await,
-        }
-    }
     fn get_connection(&self) -> Option<&ConnectionType> {
         match self {
             SmartDeviceType::Socket(s) => s.get_connection(),

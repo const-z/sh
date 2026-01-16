@@ -1,11 +1,10 @@
+pub mod builder;
 pub mod errors;
+pub mod reporter;
 pub mod smart_device;
 pub mod smart_home;
 pub mod smart_room;
-
-pub trait Report {
-    fn get_status_report(&self) -> impl std::future::Future<Output = String> + Send;
-}
+pub mod subscriber;
 
 /// Макрос для создания комнат
 #[macro_export]
