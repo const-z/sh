@@ -25,9 +25,9 @@ impl DeviceData {
         }
     }
 
-    pub fn as_thermometer(self) -> ThermometerData {
+    pub fn as_thermometer(&self) -> ThermometerData {
         match self {
-            DeviceData::Thermometer(s) => s,
+            DeviceData::Thermometer(s) => s.clone(),
             _ => panic!("Неверный тип устройства"),
         }
     }

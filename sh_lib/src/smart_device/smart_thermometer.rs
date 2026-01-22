@@ -10,13 +10,6 @@ use crate::{
 
 use super::{SmartDevice, SmartDeviceType};
 
-#[derive(Clone, Debug)]
-pub struct SmartThermometer {
-    name: String,
-    pub value: Arc<RwLock<DeviceData>>,
-    pub connection: Option<ConnectionType>,
-}
-
 #[derive(Clone, Debug, Encode, Decode)]
 pub struct ThermometerData {
     pub temp: f32,
@@ -30,6 +23,13 @@ impl ThermometerData {
             timestamp: chrono::Utc::now().timestamp_millis(),
         }
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct SmartThermometer {
+    name: String,
+    pub value: Arc<RwLock<DeviceData>>,
+    pub connection: Option<ConnectionType>,
 }
 
 impl SmartThermometer {
@@ -80,7 +80,7 @@ impl SmartDevice for SmartThermometer {
 impl Report for SmartThermometer {
     /// Получить статус термометра
     async fn get_status_report(&self) -> String {
-        let value = self.value.read().await.clone().as_thermometer();
+        let value = self.value.read().await.as_thermometer();
         format!("{}: {} C°", self.name, value.temp)
     }
 }
