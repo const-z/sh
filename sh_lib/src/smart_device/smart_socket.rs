@@ -29,7 +29,7 @@ impl SocketData {
 
 #[derive(Clone, Debug)]
 pub struct SmartSocket {
-    name: String,
+    pub name: String,
     pub value: Arc<RwLock<DeviceData>>,
     pub connection: Option<ConnectionType>,
 }

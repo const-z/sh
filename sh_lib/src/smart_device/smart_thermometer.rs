@@ -27,7 +27,7 @@ impl ThermometerData {
 
 #[derive(Clone, Debug)]
 pub struct SmartThermometer {
-    name: String,
+    pub name: String,
     pub value: Arc<RwLock<DeviceData>>,
     pub connection: Option<ConnectionType>,
 }
