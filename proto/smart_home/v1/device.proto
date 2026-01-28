@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package smart_home.v1;
+
+import "smart_home/v1/common.proto";
+
+// Device
+
+enum DeviceType {
+  DEVICE_TYPE_UNSPECIFIED = 0;
+  DEVICE_TYPE_SOCKET = 1;
+  DEVICE_TYPE_THERMO = 2;
+}
+
+message AddDeviceRequest {
+  string home_id = 1;
+  string room_id = 2;
+  string name = 3;
+  DeviceType device_type = 4;
+  ConnectionSettings connection = 5;
+}
+
+message AddDeviceResponse {
+  string device_id = 1;
+}
+
+message DeleteDeviceRequest {
+  string home_id = 1;
+  string room_id = 2;
+  string device_id = 3;
+}
+
+message DeleteDeviceResponse {}
+
+message ListDevicesRequest {
+  string home_id = 1;
+  string room_id = 2;
+}
+
+message ListDevicesResponse {
+  repeated Item items = 1;
+}

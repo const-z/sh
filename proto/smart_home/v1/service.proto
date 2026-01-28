@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package smart_home.v1;
+
+import "smart_home/v1/common.proto";
+import "smart_home/v1/device.proto";
+import "smart_home/v1/home.proto";
+import "smart_home/v1/room.proto";
+
+service HomeService {
+  rpc AddHome(AddHomeRequest) returns (AddHomeResponse);
+  rpc DeleteHome(DeleteHomeRequest) returns (DeleteHomeResponse);
+  rpc ListHomes(ListHomesRequest) returns (ListHomesResponse);
+
+  rpc AddRoom(AddRoomRequest) returns (AddRoomResponse);
+  rpc DeleteRoom(DeleteRoomRequest) returns (DeleteRoomResponse);
+  rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse);
+
+  rpc AddDevice(AddDeviceRequest) returns (AddDeviceResponse);
+  rpc DeleteDevice(DeleteDeviceRequest) returns (DeleteDeviceResponse);
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
+
+  rpc GetReport(GetReportRequest) returns (GetReportResponse);
+}

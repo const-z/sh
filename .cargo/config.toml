@@ -1,7 +1,9 @@
 [alias]
-lint = "clippy --all --all-targets -- -D warnings"
-test-lib = "test --package=sh_lib"
-test-ex = "test --package=sh_ex"
-fmt-check = "fmt -- --check"
+c = "clippy --all --all-targets -- -D warnings"
+f = "fmt --check --all"
 br = "build --release"
-clean = "rm -rf target"
+
+[net]
+retry = 3
+git-fetch-with-cli = true
+offline = true

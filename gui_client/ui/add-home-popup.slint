@@ -1,0 +1,66 @@
+import {
+    VerticalBox,
+    LineEdit,
+    HorizontalBox,
+    Button,
+    Palette,
+    StyleMetrics,
+} from "std-widgets.slint";
+
+import { HomeService } from "home-service.slint";
+
+export component AddHomePopup inherits PopupWindow {
+    close-policy: PopupClosePolicy.no-auto-close;
+    forward-focus: home-name-edit;
+
+    function submit() {
+        HomeService.add-home(home-name-edit.text);
+        self.close();
+    }
+
+    function cancel() {
+        self.close();
+    }
+
+    Rectangle {
+        background: @linear-gradient(0deg, Palette.background 0%, Palette.accent-foreground 50%);
+
+        HorizontalBox {
+            padding-left: root.width / 4;
+            padding-right: root.width / 4;
+            VerticalBox {
+                spacing: StyleMetrics.layout-spacing;
+                alignment: LayoutAlignment.center;
+
+                Text {
+                    text: "Добавить новый дом";
+                }
+
+                home-name-edit := LineEdit {
+                    placeholder-text: "Введите имя дома";
+                    accepted => {
+                        submit();
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: LayoutAlignment.end;
+                    Button {
+                        text: "Сохранить";
+
+                        clicked => {
+                            submit();
+                        }
+                    }
+
+                    Button {
+                        text: "Отмена";
+                        clicked => {
+                            cancel();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

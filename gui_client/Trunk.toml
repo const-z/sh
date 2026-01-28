@@ -1,0 +1,6 @@
+# [serve]
+# addresses = [""]
+
+[build]
+# target = "./index.html"
+release = false

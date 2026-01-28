@@ -1,0 +1,86 @@
+import {
+    VerticalBox,
+    LineEdit,
+    HorizontalBox,
+    Button,
+    Palette,
+    StyleMetrics,
+    ComboBox,
+    GroupBox,
+} from "std-widgets.slint";
+
+import { HomeService } from "home-service.slint";
+
+export component AddDevicePopup inherits PopupWindow {
+    close-policy: PopupClosePolicy.no-auto-close;
+    forward-focus: device-name;
+
+    in property <string> home-id;
+    in property <string> room-id;
+    in property <string> room-name;
+
+    function submit() {
+        HomeService.add-device(home-id, room-id, device-type.current-index + 1, device-name.text, device-ip.text, device-port.text);
+        self.close();
+    }
+
+    function cancel() {
+        self.close();
+    }
+
+    Rectangle {
+        background: @linear-gradient(0deg, Palette.background 0%, Palette.accent-foreground 50%);
+        dumb := LineEdit{
+            visible: false;
+        }
+        HorizontalBox {
+            padding-left: root.width / 4;
+            padding-right: root.width / 4;
+            VerticalBox {
+                spacing: StyleMetrics.layout-spacing;
+                alignment: LayoutAlignment.center;
+
+                Text {
+                    text: "Добавить новое устройство в комнату \"\{room-name}\"";
+                }
+
+                device-type := ComboBox {
+                    height: dumb.height;
+                    model: ["Умная розетка", "Умный термометр"];
+                    current-index: 0;
+                }
+
+                device-name := LineEdit {
+                    placeholder-text: "Введите название устройства";
+                }
+
+                device-ip := LineEdit {
+                    text: "127.0.0.1";
+                    placeholder-text: "Введите IP-адрес устройства";
+                }
+
+                device-port := LineEdit {
+                    text: "3001";
+                    placeholder-text: "Введите порт устройства";
+                }
+
+                HorizontalBox {
+                    alignment: LayoutAlignment.end;
+                    Button {
+                        text: "Сохранить";
+                        clicked => {
+                            submit();
+                        }
+                    }
+
+                    Button {
+                        text: "Отмена";
+                        clicked => {
+                            cancel();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

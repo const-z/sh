@@ -14,7 +14,7 @@ impl Subscribe for MySubscriber {
 
 #[tokio::main]
 async fn main() {
-    let mut room = SmartRoom::new(String::from("Комната"), &[]);
+    let mut room = SmartRoom::new(String::from("Комната"));
     room.subscribe(|device_name| println!("Device added: {}", device_name));
     room.subscribe(MySubscriber {});
 
