@@ -1,4 +1,12 @@
 [workspace]
-members = ["sh_lib", "sh_ex", "sh_socket_emulator", "sh_therm_emulator"]
+members = [
+  "sh_lib",
+  "sh_ex",
+  "sh_socket_emulator",
+  "sh_therm_emulator",
+  "c_socket_lib",
+  "c_socket_use_runtime",
+  "c_socket_use_static",
+]
 
 resolver = "3"

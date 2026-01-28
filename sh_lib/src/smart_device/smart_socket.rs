@@ -63,7 +63,7 @@ impl SmartSocket {
     /// Включить розетку
     pub async fn turn_on(&mut self) {
         let mut value = self.value.write().await;
-        let current_data = value.clone().as_socket();
+        let current_data = value.as_socket();
         value.update(DeviceData::Socket(SocketData::new(
             current_data.power,
             true,
@@ -73,7 +73,7 @@ impl SmartSocket {
     /// Выключить розетку
     pub async fn turn_off(&mut self) {
         let mut value = self.value.write().await;
-        let current_data = value.clone().as_socket();
+        let current_data = value.as_socket();
         value.update(DeviceData::Socket(SocketData::new(
             current_data.power,
             false,
@@ -92,7 +92,9 @@ impl SmartDevice for SmartSocket {
     }
 
     async fn get_data(&self) -> DeviceData {
-        self.value.read().await.clone()
+        let mut data = self.value.read().await.as_socket();
+        data.power = if data.is_on { data.power } else { 0.0 };
+        DeviceData::Socket(data)
     }
 
     fn get_connection(&self) -> Option<&ConnectionType> {
