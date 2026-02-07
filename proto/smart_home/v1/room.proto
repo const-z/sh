@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package smart_home.v1;
+
+import "smart_home/v1/common.proto";
+
+// Room
+
+message AddRoomRequest {
+  string name = 1;
+  string home_id = 2;
+}
+
+message AddRoomResponse {
+  string room_id = 1;
+}
+
+message DeleteRoomRequest {
+  string home_id = 1;
+  string room_id = 2;
+}
+
+message DeleteRoomResponse {}
+
+message ListRoomsRequest {
+  string home_id = 1;
+}
+
+message ListRoomsResponse {
+  repeated Item items = 1;
+}

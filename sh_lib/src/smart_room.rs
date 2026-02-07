@@ -2,6 +2,7 @@ use core::fmt;
 use std::fmt::Write;
 use std::{collections::HashMap, vec};
 
+use crate::id::Id;
 use crate::{
     reporter::Report,
     smart_device::{SmartDevice, SmartDeviceType},
@@ -9,9 +10,10 @@ use crate::{
 };
 
 pub struct SmartRoom {
+    id: Id,
     name: String,
     devices: HashMap<String, SmartDeviceType>,
-    subscribers: Vec<Box<dyn Subscribe>>,
+    subscribers: Vec<Box<dyn Subscribe + Send + Sync>>,
 }
 
 impl Subscribe for SmartRoom {
@@ -25,6 +27,7 @@ impl Subscribe for SmartRoom {
 impl Clone for SmartRoom {
     fn clone(&self) -> Self {
         Self {
+            id: self.id.clone(),
             name: self.name.clone(),
             devices: self.devices.clone(),
             subscribers: vec![],
@@ -42,60 +45,85 @@ impl fmt::Debug for SmartRoom {
 }
 
 impl SmartRoom {
-    /// Создать комнату
-    pub fn new(name: impl Into<String>, devices: &[SmartDeviceType]) -> Self {
+    /// Создать пустую комнату
+    pub fn new(name: impl Into<String>) -> Self {
+        let name = name.into();
         Self {
-            name: name.into(),
-            devices: HashMap::from_iter(devices.iter().map(|d| (d.get_name().clone(), d.clone()))),
-            subscribers: vec![],
+            id: Id::from_string(&name),
+            name,
+            devices: HashMap::new(),
+            subscribers: Vec::new(),
         }
     }
 
+    /// Создать комнату с устройствами
+    pub fn new_with_devices(name: impl Into<String>, devices: &[SmartDeviceType]) -> Self {
+        let name = name.into();
+        Self {
+            id: Id::from_string(&name),
+            name,
+            devices: HashMap::from_iter(
+                devices.iter().map(|d| (d.get_id().to_string(), d.clone())),
+            ),
+            subscribers: Vec::new(),
+        }
+    }
+
+    /// Получить id комнаты
+    pub fn get_id(&self) -> &Id {
+        &self.id
+    }
+
+    /// Получить имя комнаты
     pub fn get_name(&self) -> &String {
         &self.name
     }
 
     /// Получить ссылку на устройство по его имени
-    pub fn get_device(&self, name: &str) -> Option<&SmartDeviceType> {
-        self.devices.get(name)
+    pub fn get_device(&self, id: &Id) -> Option<&SmartDeviceType> {
+        self.devices.get(&id.to_string())
     }
 
     /// Получить мутабельную ссылку на устройство по его имени
-    pub fn get_device_mut(&mut self, name: &str) -> Option<&mut SmartDeviceType> {
-        self.devices.get_mut(name)
+    pub fn get_device_mut(&mut self, id: &Id) -> Option<&mut SmartDeviceType> {
+        self.devices.get_mut(&id.to_string())
     }
 
     /// Получить массив ссылок на устройства в комнате
-    pub fn get_devices(&self) -> Vec<&SmartDeviceType> {
-        Vec::from_iter(self.devices.values())
+    pub fn get_devices(&self) -> &HashMap<String, SmartDeviceType> {
+        &self.devices
     }
 
     /// Получить массив мутабельных ссылок на устройства в комнате
-    pub fn get_devices_mut(&mut self) -> Vec<&mut SmartDeviceType> {
-        Vec::from_iter(self.devices.values_mut())
+    pub fn get_devices_mut(&mut self) -> &mut HashMap<String, SmartDeviceType> {
+        &mut self.devices
     }
 
-    pub fn add_device<T>(&mut self, device: T)
+    pub fn add_device<T>(&mut self, device: T) -> Id
     where
         T: SmartDevice + Into<SmartDeviceType>,
     {
         let device_name = device.get_name().clone();
+        let id = device.get_id().clone();
 
-        self.devices.insert(device_name.clone(), device.into());
+        self.devices.insert(id.to_string(), device.into());
 
         for subscriber in &mut self.subscribers {
             subscriber.on_event(device_name.clone());
         }
+
+        id
     }
 
     /// Удалить устройство из комнаты
-    pub fn del_device(&mut self, device_name: &str) {
-        self.devices.remove(device_name);
+    pub fn delete_device(&mut self, id: &Id) -> Option<SmartDeviceType> {
+        self.devices.remove(&id.to_string())
     }
 
+    /// Подписаться на уведомления
     pub fn subscribe<S>(&mut self, subscriber: S)
     where
-        S: Subscribe + 'static,
+        S: Subscribe + Send + Sync + 'static,
     {
         self.subscribers.push(Box::new(subscriber));
     }
@@ -121,24 +149,25 @@ impl Report for SmartRoom {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::smart_device::{SmartSocket, SmartThermometer};
 
     #[tokio::test]
     async fn add_device() {
-        let mut room = SmartRoom::new(String::from("Комната"), &[]);
-        room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
-        room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, true));
+        let mut room = SmartRoom::new("Комната");
+        let id_therm = room.add_device(SmartThermometer::new("Термометр", 24.0));
+        let id_socket = room.add_device(SmartSocket::new("Розетка", 1000.0, true));
 
         assert_eq!(
-            room.get_device("Термометр")
+            room.get_device(&id_therm)
                 .unwrap()
                 .get_status_report()
                 .await,
             "Термометр: 24 C°"
         );
         assert_eq!(
-            room.get_device("Розетка")
+            room.get_device(&id_socket)
                 .unwrap()
                 .get_status_report()
                 .await,
@@ -148,18 +177,19 @@ mod tests {
 
     #[tokio::test]
     async fn get_mut_device() {
-        let mut room = SmartRoom::new(String::from("Комната"), &[]);
-        room.add_device(SmartThermometer::new(String::from("Термометр"), 24.0));
-        room.add_device(SmartSocket::new(String::from("Розетка"), 1000.0, true));
+        let mut room = SmartRoom::new("Комната");
+        let id_therm = room.add_device(SmartThermometer::new("Термометр", 24.0));
+        room.add_device(SmartSocket::new("Розетка", 1000.0, true));
 
-        let device = room.get_device_mut("Термометр").unwrap();
+        let device = room.get_device_mut(&id_therm).unwrap();
 
         if let SmartDeviceType::Thermometer(thermometer) = device {
-            thermometer.set_temp(25.0).await;
+            let mut td = thermometer.value.write().await;
+            td.temp = 25.0;
         }
 
         assert_eq!(
-            room.get_device("Термометр")
+            room.get_device(&id_therm)
                 .unwrap()
                 .get_status_report()
                 .await,

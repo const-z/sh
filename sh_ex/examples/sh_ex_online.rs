@@ -1,15 +1,17 @@
-use std::process::Stdio;
+use std::panic;
+use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 use sh_lib::{
     create_room,
     reporter::Report,
+    rich_console::{TextColor, colored_println},
     smart_device::{
         SmartSocket, SmartThermometer,
         online::{ConnectionType, OnlineDevice},
     },
     smart_home::SmartHome,
 };
-use tokio::process::Command;
 
 /// Функция, которая принимает любой объект, умеющий выводить отчёт
 pub async fn print_status_report(smart_object: &impl Report) {
@@ -17,18 +19,18 @@ pub async fn print_status_report(smart_object: &impl Report) {
 }
 
 fn make_home() -> SmartHome {
-    SmartHome::new(
-        "Мой дом".to_string(),
+    SmartHome::new_with_rooms(
+        "Мой дом",
         &[
             create_room!(
                 "Кухня",
                 SmartThermometer::new_with_connection(
-                    String::from("Термометр 1.1"),
+                    "Термометр 1.1",
                     24.0,
                     ConnectionType::udp("127.0.0.1".parse().unwrap(), 4001)
                 ),
                 SmartSocket::new_with_connection(
-                    String::from("Розетка 1.1"),
+                    "Розетка 1.1",
                     1000.0,
                     true,
                     ConnectionType::Tcp {
@@ -37,7 +39,7 @@ fn make_home() -> SmartHome {
                     },
                 ),
                 SmartSocket::new_with_connection(
-                    String::from("Розетка 1.2"),
+                    "Розетка 1.2",
                     2000.0,
                     false,
                     ConnectionType::Tcp {
@@ -46,7 +48,7 @@ fn make_home() -> SmartHome {
                     },
                 ),
                 SmartSocket::new_with_connection(
-                    String::from("Розетка 1.3"),
+                    "Розетка 1.3",
                     1100.25,
                     true,
                     ConnectionType::Tcp {
@@ -58,12 +60,12 @@ fn make_home() -> SmartHome {
             create_room!(
                 "Кабинет",
                 SmartThermometer::new_with_connection(
-                    String::from("Термометр 2.1"),
+                    "Термометр 2.1",
                     20.0,
                     ConnectionType::udp("127.0.0.1".parse().unwrap(), 4002)
                 ),
                 SmartSocket::new_with_connection(
-                    String::from("Розетка 2.1"),
+                    "Розетка 2.1",
                     1000.0,
                     true,
                     ConnectionType::Tcp {
@@ -72,7 +74,7 @@ fn make_home() -> SmartHome {
                     },
                 ),
                 SmartSocket::new_with_connection(
-                    String::from("Розетка 2.2"),
+                    "Розетка 2.2",
                     2000.0,
                     false,
                     ConnectionType::Tcp {
@@ -81,7 +83,7 @@ fn make_home() -> SmartHome {
                     },
                 ),
                 SmartSocket::new_with_connection(
-                    String::from("Розетка 2.3"),
+                    "Розетка 2.3",
                     1100.25,
                     true,
                     ConnectionType::Tcp {
@@ -94,71 +96,71 @@ fn make_home() -> SmartHome {
     )
 }
 
-#[allow(dead_code)]
-enum TextColor {
-    Red,
-    Green,
-    Yellow,
-    Blue,
-    Magenta,
-    Cyan,
-    Reset,
-}
+fn init_emulators() {
+    let handlers = vec![
+        Command::new("cargo")
+            .env("SH_THERM_EMULATOR_TARGET_PORT", "4001")
+            .arg("run")
+            .arg("--bin")
+            .arg("sh_therm_emulator")
+            .spawn()
+            .inspect(|c| {
+                colored_println(
+                    &format!("Эмулятор термометра 127.0.0.1:4001. pid {}", c.id()),
+                    TextColor::Magenta,
+                );
+            })
+            .expect(""),
+        Command::new("cargo")
+            .env("SH_THERM_EMULATOR_TARGET_PORT", "4002")
+            .arg("run")
+            .arg("--bin")
+            .arg("sh_therm_emulator")
+            .spawn()
+            .inspect(|c| {
+                colored_println(
+                    &format!("Эмулятор термометра 127.0.0.1:4002. pid {}", c.id()),
+                    TextColor::Magenta,
+                );
+            })
+            .expect("Не удалось запустить эмулятор термометра 127.0.0.1:4002"),
+        Command::new("cargo")
+            .env("SH_SOCKET_EMULATOR_PORT", "3001")
+            .arg("run")
+            .arg("--bin")
+            .arg("sh_socket_emulator")
+            .spawn()
+            .inspect(|c| {
+                colored_println(
+                    &format!("Эмулятор розетки 127.0.0.1:3001. pid {}", c.id()),
+                    TextColor::Magenta,
+                );
+            })
+            .expect("Не удалось запустить эмулятор розетки 127.0.0.1:3001"),
+    ];
 
-impl TextColor {
-    fn as_code(&self) -> &str {
-        match self {
-            TextColor::Red => "31m",
-            TextColor::Green => "32m",
-            TextColor::Yellow => "33m",
-            TextColor::Blue => "34m",
-            TextColor::Magenta => "35m",
-            TextColor::Cyan => "36m",
-            TextColor::Reset => "0m",
-        }
-    }
-}
-
-fn colored_println(text: &str, color: TextColor) {
-    println!(
-        "\x1b[{}{}\x1b[{}",
-        color.as_code(),
-        text,
-        TextColor::Reset.as_code()
-    );
+    let emulators = Arc::new(Mutex::new(handlers));
+    let ref_em = emulators.clone();
+    panic::set_hook(Box::new(move |info| {
+        let mut l = ref_em.lock().unwrap();
+        l.iter_mut().for_each(|c| match c.kill() {
+            Ok(_) => {
+                colored_println(
+                    &format!("Эмулятор остановлен. pid {}", c.id()),
+                    TextColor::Red,
+                );
+            }
+            Err(e) => {
+                colored_println(&e.to_string(), TextColor::Red);
+            }
+        });
+        println!("{}", info);
+    }));
 }
 
 #[tokio::main]
 async fn main() {
-    colored_println("Запускаем эмулятор термометра 1.1", TextColor::Magenta);
-    Command::new("cargo")
-        .env("SH_THERM_EMULATOR_TARGET_PORT", "4001")
-        .arg("run")
-        .arg("--bin")
-        .arg("sh_therm_emulator")
-        .stdout(Stdio::null())
-        .spawn()
-        .unwrap();
-
-    colored_println("Запускаем эмулятор термометра 2.1", TextColor::Magenta);
-    Command::new("cargo")
-        .env("SH_THERM_EMULATOR_TARGET_PORT", "4002")
-        .arg("run")
-        .arg("--bin")
-        .arg("sh_therm_emulator")
-        .stdout(Stdio::null())
-        .spawn()
-        .unwrap();
-
-    colored_println("Запускаем эмулятор розеток", TextColor::Magenta);
-    Command::new("cargo")
-        .env("SH_SOCKET_EMULATOR_PORT", "3001")
-        .arg("run")
-        .arg("--bin")
-        .arg("sh_socket_emulator")
-        .stdout(Stdio::null())
-        .spawn()
-        .unwrap();
+    init_emulators();
 
     colored_println("Ждём запуска всех эмуляторов", TextColor::Magenta);
     tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
@@ -168,9 +170,9 @@ async fn main() {
     colored_println("Исходный отчет", TextColor::Green);
     print_status_report(&home).await;
 
-    for r in home.get_rooms_mut() {
-        for d in r.get_devices_mut() {
-            if let Err(e) = d.connect().await {
+    for room in home.get_rooms_mut().values_mut() {
+        for device in room.get_devices_mut().values_mut() {
+            if let Err(e) = device.connect().await {
                 eprintln!("❌ Failed to connect: {}", e);
             }
         }

@@ -1,0 +1,29 @@
+import {
+    StyleMetrics,
+    Palette,
+    GroupBox,
+    GridBox,
+    HorizontalBox,
+} from "std-widgets.slint";
+export component MyTextButton inherits Rectangle {
+    in property <string> text;
+    callback clicked();
+
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    border-radius: 10px;
+    background: ta.pressed ? Palette.control-background.transparentize(0.5) : ta.has-hover ? Palette.control-background.brighter(0.3) : Palette.control-background;
+    animate background { duration: 150ms; }
+
+    HorizontalBox {
+        padding: StyleMetrics.layout-padding;
+        Text {
+            vertical-alignment: TextVerticalAlignment.center;
+            text: root.text;
+        }
+    }
+}

@@ -3,15 +3,12 @@ use std::env;
 use dotenv::dotenv;
 use tokio::net::UdpSocket;
 
-use sh_lib::smart_device::{
-    SmartDevice,
-    contracts::{DecodeEncode, DeviceResponse},
-};
-
-const DEVICE_ID: &str = "dGhlcm0gZW11bGF0b3IgMQ";
+use sh_lib::smart_device::contracts::{DecodeEncode, DeviceData, DeviceResponse};
 
 #[tokio::main]
 async fn main() {
+    let pid = std::process::id();
+
     dotenv().ok();
 
     let target_ip = env::var("SH_THERM_EMULATOR_TARGET_IP").unwrap_or("127.0.0.1".to_string());
@@ -22,23 +19,30 @@ async fn main() {
         .parse()
         .unwrap();
 
-    let mut thermometer =
-        sh_lib::smart_device::smart_thermometer::SmartThermometer::new(DEVICE_ID.to_string(), 0.0);
+    let thermometer =
+        sh_lib::smart_device::smart_thermometer::SmartThermometer::new(pid.to_string(), 0.0);
+    thermometer.value.write().await.is_online = true;
 
     let udp_socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
     let target_addr = format!("{}:{}", target_ip, target_port);
 
     println!(
-        "Термометр SN: {} пишет статус в {}",
-        DEVICE_ID, &target_addr
+        "Термометр SN: {} будет писать статус в {}",
+        pid, &target_addr
     );
 
     loop {
-        let temp = (rand::random_range(1800..=2500) as f32) / 100.0;
-        thermometer.set_temp(temp).await;
+        // Для демонстрации смены состояния
+        {
+            thermometer.value.write().await.temp = (rand::random_range(1800..=2500) as f32) / 100.0;
+            thermometer.value.write().await.timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64;
+        }
 
         let therm_data = DeviceResponse {
-            data: Some(thermometer.get_data().await),
+            data: Some(DeviceData::Thermometer(thermometer.get_data().await)),
             success: true,
             error: None,
         };
@@ -59,10 +63,7 @@ async fn main() {
                     continue;
                 }
 
-                println!(
-                    "Термометр SN: {} отправил данные: {:#?}",
-                    DEVICE_ID, therm_data
-                );
+                println!("Термометр SN: {} отправил данные: {:?}", pid, therm_data);
             }
         }
     }

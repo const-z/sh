@@ -4,7 +4,7 @@ use std::{
 };
 
 use lazy_static::lazy_static;
-use sh_lib::smart_device::{SmartDevice, SmartSocket};
+use sh_lib::smart_device::SmartSocket;
 
 // Не хочу подключать tokio
 fn block_on<F: Future>(future: F) -> F::Output {
@@ -34,14 +34,14 @@ lazy_static! {
 pub struct SocketState {
     pub power: f32,
     pub is_on: bool,
-    pub timestamp: i64,
+    pub timestamp: u64,
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn turn_off() -> SocketState {
     let mut state = STATE.lock().unwrap();
     block_on(state.turn_off());
-    let r = block_on(state.get_data()).as_socket();
+    let r = block_on(state.get_data());
     SocketState {
         power: r.power,
         is_on: r.is_on,
@@ -53,7 +53,7 @@ pub extern "C" fn turn_off() -> SocketState {
 pub extern "C" fn turn_on() -> SocketState {
     let mut state = STATE.lock().unwrap();
     block_on(state.turn_on());
-    let r = block_on(state.get_data()).as_socket();
+    let r = block_on(state.get_data());
     SocketState {
         power: r.power,
         is_on: r.is_on,
@@ -64,7 +64,7 @@ pub extern "C" fn turn_on() -> SocketState {
 #[unsafe(no_mangle)]
 pub extern "C" fn get_data() -> SocketState {
     let state = STATE.lock().unwrap();
-    let r = block_on(state.get_data()).as_socket();
+    let r = block_on(state.get_data());
     SocketState {
         power: r.power,
         is_on: r.is_on,

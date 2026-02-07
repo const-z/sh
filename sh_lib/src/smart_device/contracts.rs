@@ -14,8 +14,11 @@ pub enum DeviceData {
 }
 
 impl DeviceData {
-    pub fn update(&mut self, data: DeviceData) {
-        *self = data;
+    pub fn set_online(&mut self, online: bool) {
+        match self {
+            DeviceData::Socket(s) => s.is_online = online,
+            DeviceData::Thermometer(t) => t.is_online = online,
+        }
     }
 
     pub fn as_socket(&self) -> SocketData {

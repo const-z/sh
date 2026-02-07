@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package healthcheck.v1;
+
+message CheckRequest {}
+
+message CheckResponse {
+  string status = 1;
+  string error = 2;
+}
+
+service HealthcheckService {
+  rpc Check(CheckRequest) returns (CheckResponse);
+}

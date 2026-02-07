@@ -1,0 +1,13 @@
+export global HomeService {
+    callback request-home-list();
+    callback add-home(name: string);
+    callback delete-home(home-id: string);
+    //
+    callback request-rooms-list(home_id: string);
+    callback add-room(home-id: string, name: string);
+    callback delete-room(home-id: string, room-id: string);
+    //
+    callback request-devices-list(home-id: string, room-id: string);
+    callback add-device(home-id: string, room-id: string, device-type: int, name: string, ip-addr: string, port: string);
+    callback delete-device(home-id: string, room-id: string, device-id: string);
+}

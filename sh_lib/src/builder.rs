@@ -34,7 +34,7 @@ impl RoomBuilder {
     pub fn add_room(mut self, room_name: String) -> Self {
         self.home_builder
             .rooms
-            .push(SmartRoom::new(self.name, &self.devices));
+            .push(SmartRoom::new_with_devices(self.name, &self.devices));
 
         self.home_builder.add_room(room_name)
     }
@@ -48,8 +48,8 @@ impl RoomBuilder {
     pub fn build(mut self) -> SmartHome {
         self.home_builder
             .rooms
-            .push(SmartRoom::new(self.name, &self.devices));
+            .push(SmartRoom::new_with_devices(self.name, &self.devices));
 
-        SmartHome::new(String::from("Дом"), &self.home_builder.rooms)
+        SmartHome::new_with_rooms("Дом", &self.home_builder.rooms)
     }
 }

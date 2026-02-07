@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package smart_home.v1;
+
+enum ItemType {
+  ITEM_TYPE_UNSPECIFIED = 0;
+  ITEM_TYPE_HOME = 1;
+  ITEM_TYPE_ROOM = 2;
+  ITEM_TYPE_SOCKET = 3;
+  ITEM_TYPE_THERMO = 4;
+}
+
+message SocketValue {
+  bool is_on = 1;
+  float power = 2;
+  uint64 timestamp = 3;
+  bool is_online = 4;
+}
+
+message ThermometrValue {
+  float temp = 1;
+  uint64 timestamp = 2;
+  bool is_online = 3;
+}
+
+message ConnectionSettings {
+  string ip = 1;
+  string port = 2;
+  string service = 3;
+}
+
+message Item {
+  string id = 1;
+  string name = 2;
+  ItemType item_type = 3;
+  ConnectionSettings device_connection = 4;
+  oneof value {
+    SocketValue socket_value = 5;
+    ThermometrValue thermo_value = 6;
+  }
+}
+
+message GetReportRequest {
+  string home_id = 1;
+}
+
+message GetReportResponse {
+  repeated Item items = 1;
+}

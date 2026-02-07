@@ -97,7 +97,7 @@ async fn send_command(
 
 async fn start_tcp_monitoring<Fut, F>(stream: Arc<tokio::sync::Mutex<TcpStream>>, mut callback: F)
 where
-    F: FnMut(DeviceData) -> Fut + Send + 'static,
+    F: FnMut(Result<DeviceData, String>) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
     tokio::spawn(async move {
@@ -105,10 +105,11 @@ where
             let device_response = send_command(&stream, Commands::GetStatus).await;
 
             if let Err(e) = device_response {
-                eprintln!(
+                callback(Err(format!(
                     "{}",
                     SmartHomeErrors::getting_status_error(format!("TCP: {}", e))
-                );
+                )))
+                .await;
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 continue;
             }
@@ -120,7 +121,7 @@ where
                 continue;
             }
 
-            callback(device_response.unwrap()).await;
+            callback(Ok(device_response.unwrap())).await;
 
             tokio::time::sleep(Duration::from_secs(2)).await;
         }
@@ -129,7 +130,7 @@ where
 
 async fn start_udp_monitoring<Fut, F>(socket: Arc<Mutex<UdpSocket>>, mut callback: F)
 where
-    F: FnMut(DeviceData) -> Fut + Send + 'static,
+    F: FnMut(Result<DeviceData, String>) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = ()> + Send + 'static,
 {
     tokio::spawn(async move {
@@ -139,10 +140,11 @@ where
             let locked_socket = socket.lock().await;
 
             if let Err(e) = locked_socket.recv_from(&mut message_length) {
-                eprintln!(
+                callback(Err(format!(
                     "{}",
                     SmartHomeErrors::getting_status_error(format!("UDP: {}", e))
-                );
+                )))
+                .await;
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 continue;
             }
@@ -151,10 +153,11 @@ where
             let mut message = vec![0u8; message_length + size_of::<usize>()];
 
             if let Err(e) = locked_socket.recv_from(&mut message) {
-                eprintln!(
+                callback(Err(format!(
                     "{}",
                     SmartHomeErrors::getting_status_error(format!("UDP: {}", e))
-                );
+                )))
+                .await;
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 continue;
             }
@@ -162,7 +165,11 @@ where
             let device_response = decode_result(message[size_of::<usize>()..].to_vec());
 
             if let Err(e) = device_response {
-                eprintln!("❌ UDP: Ошибка при декодировании сообщения: {}", e);
+                callback(Err(format!(
+                    "UDP: Ошибка при декодировании сообщения: {}",
+                    e
+                )))
+                .await;
                 tokio::time::sleep(Duration::from_secs(2)).await;
                 continue;
             }
@@ -174,7 +181,7 @@ where
                 continue;
             }
 
-            callback(device_response.unwrap()).await;
+            callback(Ok(device_response.unwrap())).await;
         }
     });
 }
@@ -203,7 +210,15 @@ impl OnlineDevice for SmartDeviceType {
                                 start_tcp_monitoring(Arc::new(Mutex::new(s)), move |data| {
                                     let value = value.clone();
                                     async move {
-                                        value.write().await.update(data);
+                                        match data {
+                                            Ok(data) => {
+                                                value.write().await.update(data.as_socket());
+                                            }
+                                            Err(e) => {
+                                                eprintln!("{}", e);
+                                                value.write().await.is_online = false;
+                                            }
+                                        }
                                     }
                                 })
                                 .await
@@ -231,7 +246,15 @@ impl OnlineDevice for SmartDeviceType {
                                 start_udp_monitoring(Arc::new(Mutex::new(s)), move |data| {
                                     let value = value.clone();
                                     async move {
-                                        value.write().await.update(data);
+                                        match data {
+                                            Ok(data) => {
+                                                value.write().await.update(data.as_thermometer());
+                                            }
+                                            Err(e) => {
+                                                eprintln!("{}", e);
+                                                value.write().await.is_online = false;
+                                            }
+                                        }
                                     }
                                 })
                                 .await
