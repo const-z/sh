@@ -1,0 +1,464 @@
+import {
+    Button,
+    StyleMetrics,
+    VerticalBox,
+    HorizontalBox,
+    ListView,
+    GridBox,
+    StandardTableView,
+    ScrollView,
+    LineEdit,
+    Palette,
+} from "std-widgets.slint";
+
+import { AddHomePopup } from "add-home-popup.slint";
+import { HomeService } from "home-service.slint";
+
+
+import { ConfirmDialog } from "delete-home-popup.slint";
+import { ErrorBox } from "error-box.slint";
+import { MyIconButton } from "my-icon-button.slint";
+import { MyTextButton } from "my-text-button.slint";
+import { AddRoomPopup } from "add-room-popup.slint";
+import { AddDevicePopup } from "add-device-popup.slint";
+
+import "./FiraCode-Regular.ttf";
+
+export { HomeService } from "home-service.slint";
+
+export struct SocketData {
+    power: string,
+    is-on: bool,
+    timestamp: string,
+}
+
+export struct ThermoData {
+    temp: string,
+    timestamp: string,
+}
+
+export enum DeviceType {
+    Socket,
+    Thermo
+}
+
+export struct Device {
+    id: string,
+    name: string,
+    connection: string,
+    device-type: DeviceType,
+    is-online: bool,
+    socket-data: SocketData,
+    thermo-data: ThermoData,
+}
+
+export component AppWindow inherits Window {
+    default-font-family: "Fira Code";
+    default-font-size: 12pt;
+    title: "gui";
+    background: @linear-gradient(0deg, Palette.background 0%, Palette.accent-foreground 50%);
+
+    property <{id: string, name: string}> selected-home;
+    property <{id: string, name: string}> selected-room;
+    property <{id: string, name: string}> selected-device;
+    property <{
+        container: string,
+        home-id: string,
+        home-name: string,
+        room-id: string,
+        room-name: string}> context;
+
+    in property <int> need-refresh;
+    in-out property <[[string]]> homes-list: [];
+    in-out property <[[string]]> rooms-list: [];
+    in-out property <[Device]> devices-list: [];
+    in-out property <string> app-error: "";
+
+    changed need-refresh => {
+        debug("refresh canvas state");
+    }
+
+    changed app-error => {
+        if app-error != "" {
+            error-window.show();
+        } else {
+            error-window.close();
+        }
+    }
+
+    error-window := ErrorBox {
+        error-message <=> root.app-error;
+        x: 0px;
+        y: 0px;
+        width: root.width;
+        height: root.height;
+    }
+
+    add-home-window := AddHomePopup {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+    }
+
+    add-room-window := AddRoomPopup {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+        home-id: root.context.home-id;
+        home-name: root.context.home-name;
+    }
+
+    add-device-window := AddDevicePopup {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+        home-id: root.context.home-id;
+        room-id: root.context.room-id;
+        room-name: root.context.room-name;
+    }
+
+    delete-home-window := ConfirmDialog {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+        text: "Вы действительно хотите удалить дом \"\{root.selected-home.name}\"";
+        confirm-button-text: "Удалить";
+        cancel-button-text: "Отмена";
+        confirm() => {
+            HomeService.delete-home(root.selected-home.id);
+            root.selected-home = { };
+            self.close();
+        }
+
+        cancel => {
+            self.close()
+        }
+    }
+
+    delete-room-window := ConfirmDialog {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+        text: "Вы действительно хотите удалить комнату \"\{root.selected-room.name}\"";
+        confirm-button-text: "Удалить";
+        cancel-button-text: "Отмена";
+        confirm() => {
+            HomeService.delete-room(root.context.home-id, root.selected-room.id);
+            root.selected-room = { };
+            self.close();
+        }
+
+        cancel => {
+            self.close()
+        }
+    }
+
+    delete-device-window := ConfirmDialog {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+        text: "Вы действительно хотите удалить устройство \"\{root.selected-device.name}\"";
+        confirm-button-text: "Удалить";
+        cancel-button-text: "Отмена";
+        confirm() => {
+            HomeService.delete-device(root.context.home-id, root.context.room-id, root.selected-device.id);
+            root.selected-device = { };
+            self.close();
+        }
+
+        cancel => {
+            self.close()
+        }
+    }
+
+    function get-title() -> string {
+        let home-part = root.context.home-id != "" ? "Дом \"\{root.context.home-name}\"" : "";
+        return root.context.room-id != "" ? "\{home-part} > Комната \"\{root.context.room-name}\"" : home-part;
+    }
+
+    VerticalLayout {
+        alignment: LayoutAlignment.stretch;
+        vertical-stretch: 1;
+        padding: 0;
+        spacing: 0;
+
+        HorizontalBox {
+            padding: 0;
+
+            HorizontalBox {
+                padding: StyleMetrics.layout-padding * 3 - 3.5px;
+                spacing: StyleMetrics.layout-spacing;
+
+                MyIconButton {
+                    visible: root.context.container != "";
+                    source: @image-url("icons/back.png");
+                    clicked => {
+                        if root.context.container == "home" {
+                            root.context = { };
+                        }
+                        if root.context.container == "room" {
+                            root.context.container = "home";
+                            root.context.room-id = "";
+                            root.context.room-name = "";
+                        }
+                    }
+                }
+
+                Text {
+                    vertical-alignment: center;
+                    text: get-title();
+                }
+            }
+
+            HorizontalBox {
+                alignment: LayoutAlignment.end;
+                horizontal-stretch: 1;
+                padding: StyleMetrics.layout-padding * 3 - 3.5px;
+                spacing: StyleMetrics.layout-spacing;
+
+                MyIconButton {
+                    source: @image-url("icons/plus.png");
+                    clicked => {
+                        if root.context.container == "" {
+                            add-home-window.show();
+                        } else if root.context.container == "home" {
+                            add-room-window.show();
+                        } else if root.context.container == "room" {
+                            add-device-window.show();
+                        }
+                    }
+                }
+
+                MyIconButton {
+                    source: @image-url("icons/close.png");
+                    clicked => {
+                        if root.context.container == "" {
+                            if root.selected-home.id == "" {
+                                root.app-error = "Выберите дом";
+                            } else {
+                                delete-home-window.show();
+                            }
+                        } else if root.context.container == "home" {
+                            if root.selected-room.id == "" {
+                                root.app-error = "Выберите комнату";
+                            } else {
+                                delete-room-window.show();
+                            }
+                        } else if root.context.container == "room" {
+                            if root.selected-device.id == "" {
+                                root.app-error = "Выберите устройство";
+                            } else {
+                                delete-device-window.show();
+                            }
+                        }
+                    }
+                }
+
+                MyIconButton {
+                    source: @image-url("icons/refresh.png");
+                    clicked => {
+                        if root.context.container == "" {
+                            HomeService.request-home-list();
+                        } else if root.context.container == "home" {
+                            HomeService.request-rooms-list(root.context.home-id);
+                        } else if root.context.container == "room" {
+                            HomeService.request-devices-list(root.context.home-id, root.context.room-id);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Список домов
+        if context.container == "":
+        ScrollView {
+            vertical-stretch: 1;
+            VerticalBox {
+                padding: StyleMetrics.layout-padding;
+                vertical-stretch: 1;
+                alignment: LayoutAlignment.start;
+
+                for d in homes-list: Rectangle {
+                    background: root.selected-home.id == d[0] ? Palette.selection-background : transparent;
+                    animate background { duration: 150ms; }
+
+                    TouchArea {
+                        clicked => {
+                            root.selected-home = { id: d[0], name: d[1] };
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: LayoutAlignment.stretch;
+                        Image {
+                            horizontal-stretch: 0;
+                            source: @image-url("icons/house.png");
+                            width: 20pt;
+                        }
+
+                        Text {
+                            horizontal-stretch: 1;
+                            vertical-alignment: TextVerticalAlignment.center;
+                            text: d[1];
+                        }
+
+                        MyIconButton {
+                            horizontal-stretch: 0;
+                            source: @image-url("icons/next.png");
+                            clicked => {
+                                root.context = { container: "home", home-id: d[0], home-name: d[1] };
+                                root.selected-home = { };
+                                rooms-list = [];
+                                HomeService.request-rooms-list(d[0]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Список комнат
+        if context.container == "home":
+        ScrollView {
+            VerticalBox {
+                padding: StyleMetrics.layout-padding;
+                alignment: LayoutAlignment.start;
+                vertical-stretch: 1;
+
+                for d in rooms-list: Rectangle {
+                    background: root.selected-room.id == d[0] ? Palette.selection-background : transparent;
+                    animate background { duration: 150ms; }
+
+                    TouchArea {
+                        clicked => {
+                            root.selected-room = { id: d[0], name: d[1] };
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: LayoutAlignment.stretch;
+                        Image {
+                            horizontal-stretch: 0;
+                            source: @image-url("icons/room.png");
+                            width: 20pt;
+                        }
+
+                        Text {
+                            horizontal-stretch: 1;
+                            vertical-alignment: TextVerticalAlignment.center;
+                            text: d[1];
+                        }
+
+                        MyIconButton {
+                            horizontal-stretch: 0;
+                            source: @image-url("icons/next.png");
+                            clicked => {
+                                root.context.container = "room";
+                                root.context.room-id = d[0];
+                                root.context.room-name = d[1];
+                                root.selected-home = { };
+                                root.selected-room = { };
+                                devices-list = [];
+                                HomeService.request-devices-list(root.context.home-id, root.context.room-id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Список устройств в комнате
+        if context.container == "room":
+        ScrollView {
+            VerticalBox {
+                padding: StyleMetrics.layout-padding;
+                alignment: LayoutAlignment.start;
+                vertical-stretch: 1;
+
+                for d in devices-list: Rectangle {
+                    background: root.selected-device.id == d.id ? Palette.selection-background : transparent;
+                    animate background { duration: 150ms; }
+
+                    TouchArea {
+                        clicked => {
+                            root.selected-device = { id: d.id, name: d.name };
+                        }
+                    }
+
+                    HorizontalBox {
+                        alignment: LayoutAlignment.stretch;
+                        vertical-stretch: 1;
+                        Image {
+                            horizontal-stretch: 0;
+                            source: d.device-type == DeviceType.Socket ? @image-url("icons/socket.png") : @image-url("icons/temp.png");
+                            width: 20pt;
+                        }
+
+                        Text {
+                            vertical-alignment: TextVerticalAlignment.center;
+                            horizontal-stretch: 1;
+                            text: d.name;
+                        }
+
+                        Text {
+                            horizontal-stretch: 0;
+                            vertical-alignment: TextVerticalAlignment.center;
+                            text: "\{d.connection} \{d.is-online ? "Подключён" : "Не в сети"}";
+                        }
+
+                        if d.device-type == DeviceType.Socket:
+                        VerticalBox {
+                            horizontal-stretch: 0;
+                            Text {
+                                horizontal-stretch: 1;
+                                vertical-alignment: TextVerticalAlignment.center;
+                                text: d.socket-data.timestamp;
+                            }
+
+                            Text {
+                                horizontal-stretch: 1;
+                                vertical-alignment: TextVerticalAlignment.center;
+                                text: d.socket-data.is-on ? "Вкл" : "Выкл";
+                            }
+
+                            Text {
+                                horizontal-stretch: 1;
+                                vertical-alignment: TextVerticalAlignment.center;
+                                text: "\{d.socket-data.power}Вт";
+                            }
+                        }
+
+                        if d.device-type == DeviceType.Thermo:
+                        VerticalBox {
+                            horizontal-stretch: 0;
+                            Text {
+                                horizontal-stretch: 1;
+                                vertical-alignment: TextVerticalAlignment.center;
+                                text: "\{d.thermo-data.temp}C";
+                            }
+
+                            Text {
+                                horizontal-stretch: 1;
+                                vertical-alignment: TextVerticalAlignment.center;
+                                text: d.thermo-data.timestamp;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // связка переменной с элементом в сцене, чтобы вовремя происходила перерисовка
+    Text {
+        text: "\{root.need-refresh}";
+        visible: false;
+        height: 0pt;
+    }
+}

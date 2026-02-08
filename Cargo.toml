@@ -7,6 +7,8 @@ members = [
   "c_socket_lib",
   "c_socket_use_runtime",
   "c_socket_use_static",
+  "grpc_api",
+  "gui_client", "tests_grpc_api",
 ]
 
 resolver = "3"

@@ -1,0 +1,26 @@
+import { VerticalBox } from "std-widgets.slint";
+
+export component ErrorBox inherits PopupWindow {
+    in-out property <string> error-message;
+
+    close-policy: PopupClosePolicy.close-on-click;
+
+    TouchArea {
+        clicked => {
+            error-message = "";
+        }
+    }
+
+    Rectangle {
+        background: rgba(0,0,0,0.5);
+        VerticalBox {
+            alignment: LayoutAlignment.center;
+            Text {
+                horizontal-alignment: TextHorizontalAlignment.center;
+                color: red;
+                text: error-message;
+                wrap: TextWrap.word-wrap;
+            }
+        }
+    }
+}

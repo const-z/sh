@@ -11,9 +11,11 @@ async fn main() {
     let socket2 = SmartSocket::new("Socket 2", 1000.0, true);
     let thermo1 = SmartThermometer::new("Thermo 1", 20.0);
     let thermo2 = SmartThermometer::new("Thermo 2", 25.0);
-    let room1 = SmartRoom::new("Room 1", &[socket1.clone().into(), thermo1.clone().into()]);
-    let room2 = SmartRoom::new("Room 2", &[socket2.clone().into(), thermo2.clone().into()]);
-    let home = SmartHome::new("Home", &[room1.clone(), room2.clone()]);
+    let room1 =
+        SmartRoom::new_with_devices("Room 1", &[socket1.clone().into(), thermo1.clone().into()]);
+    let room2 =
+        SmartRoom::new_with_devices("Room 2", &[socket2.clone().into(), thermo2.clone().into()]);
+    let home = SmartHome::new_with_rooms("Home", &[room1.clone(), room2.clone()]);
 
     let report = Reporter::new()
         .add_item(&home)
