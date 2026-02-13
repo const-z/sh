@@ -1,6 +1,8 @@
 pub mod builder;
 pub mod errors;
+pub mod id;
 pub mod reporter;
+pub mod rich_console;
 pub mod smart_device;
 pub mod smart_home;
 pub mod smart_room;
@@ -16,7 +18,7 @@ macro_rules! create_room {
     ($name:expr, $($device:expr),* $(,)?) => {
         {
             use sh_lib::smart_room::SmartRoom;
-            let mut room = SmartRoom::new(String::from($name), &[]);
+            let mut room = SmartRoom::new($name);
             $(
                 room.add_device($device);
             )*

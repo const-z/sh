@@ -1,0 +1,51 @@
+import {
+    VerticalBox,
+    LineEdit,
+    HorizontalBox,
+    Button,
+    Palette,
+    StyleMetrics,
+} from "std-widgets.slint";
+
+export component ConfirmDialog inherits PopupWindow {
+    close-policy: PopupClosePolicy.no-auto-close;
+
+    in property <string> text;
+    in property <string> confirm-button-text;
+    in property <string> cancel-button-text;
+
+    callback confirm();
+    callback cancel();
+
+    Rectangle {
+        background: Palette.background;
+
+        VerticalBox {
+            spacing: StyleMetrics.layout-spacing;
+            alignment: LayoutAlignment.center;
+
+            Text {
+                horizontal-alignment: TextHorizontalAlignment.center;
+                text: root.text;
+            }
+
+            HorizontalBox {
+                alignment: LayoutAlignment.center;
+                Button {
+                    text: root.confirm-button-text;
+
+                    clicked => {
+                        confirm();
+                    }
+                }
+
+                Button {
+                    text: root.cancel-button-text;
+                    clicked => {
+                        cancel();
+                    }
+                }
+            }
+        }
+    }
+}

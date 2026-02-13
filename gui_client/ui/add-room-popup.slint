@@ -1,0 +1,69 @@
+import {
+    VerticalBox,
+    LineEdit,
+    HorizontalBox,
+    Button,
+    Palette,
+    StyleMetrics,
+} from "std-widgets.slint";
+
+import { HomeService } from "home-service.slint";
+
+export component AddRoomPopup inherits PopupWindow {
+    close-policy: PopupClosePolicy.no-auto-close;
+    forward-focus: room-name-edit;
+
+    in property <string> home-id;
+    in property <string> home-name;
+
+    function submit() {
+        HomeService.add-room(home-id, room-name-edit.text);
+        self.close();
+    }
+
+    function cancel() {
+        self.close();
+    }
+
+    Rectangle {
+        background: @linear-gradient(0deg, Palette.background 0%, Palette.accent-foreground 50%);
+
+        HorizontalBox {
+            padding-left: root.width / 4;
+            padding-right: root.width / 4;
+            VerticalBox {
+                spacing: StyleMetrics.layout-spacing;
+                alignment: LayoutAlignment.center;
+
+                Text {
+                    text: "Добавить новую комнату в дом \"\{home-name}\"";
+                }
+
+                room-name-edit := LineEdit {
+                    placeholder-text: "Введите название комнаты";
+                    accepted => {
+                        submit();
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: LayoutAlignment.end;
+                    Button {
+                        text: "Сохранить";
+
+                        clicked => {
+                            submit();
+                        }
+                    }
+
+                    Button {
+                        text: "Отмена";
+                        clicked => {
+                            cancel();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -3,73 +3,77 @@ use std::sync::Arc;
 use bincode::{Decode, Encode};
 use tokio::sync::RwLock;
 
-use crate::{
-    reporter::Report,
-    smart_device::{contracts::DeviceData, online::ConnectionType},
-};
+use crate::{id::Id, reporter::Report, smart_device::online::ConnectionType};
 
 use super::{SmartDevice, SmartDeviceType};
 
 #[derive(Clone, Debug, Encode, Decode)]
 pub struct ThermometerData {
     pub temp: f32,
-    pub timestamp: i64,
+    pub timestamp: u64,
+    pub is_online: bool,
 }
 
 impl ThermometerData {
     pub fn new(temp: f32) -> Self {
         Self {
             temp,
-            timestamp: chrono::Utc::now().timestamp_millis(),
+            timestamp: chrono::Utc::now().timestamp_millis() as u64,
+            is_online: false,
         }
+    }
+
+    pub fn update(&mut self, data: ThermometerData) {
+        *self = data;
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct SmartThermometer {
+    pub id: Id,
     pub name: String,
-    pub value: Arc<RwLock<DeviceData>>,
+    pub value: Arc<RwLock<ThermometerData>>,
     pub connection: Option<ConnectionType>,
 }
 
 impl SmartThermometer {
     pub fn new(name: impl Into<String>, temp: f32) -> Self {
+        let name = name.into();
         Self {
-            name: name.into(),
-            value: Arc::new(RwLock::new(DeviceData::Thermometer(ThermometerData::new(
-                temp,
-            )))),
+            id: Id::from_string(&name),
+            name,
+            value: Arc::new(RwLock::new(ThermometerData::new(temp))),
             connection: None,
         }
     }
 
-    pub fn new_with_connection(name: String, temp: f32, connection: ConnectionType) -> Self {
+    pub fn new_with_connection(
+        name: impl Into<String>,
+        temp: f32,
+        connection: ConnectionType,
+    ) -> Self {
+        let name = name.into();
         Self {
+            id: Id::from_string(&name),
             name,
-            value: Arc::new(RwLock::new(DeviceData::Thermometer(ThermometerData::new(
-                temp,
-            )))),
+            value: Arc::new(RwLock::new(ThermometerData::new(temp))),
             connection: Some(connection),
         }
     }
 
-    pub async fn get_temp(&self) -> f32 {
-        self.value.read().await.clone().as_thermometer().temp
-    }
-
-    pub async fn set_temp(&mut self, temp: f32) {
-        let mut value = self.value.write().await;
-        value.update(DeviceData::Thermometer(ThermometerData::new(temp)));
+    /// Получить данные термометра
+    pub async fn get_data(&self) -> ThermometerData {
+        self.value.read().await.clone()
     }
 }
 
 impl SmartDevice for SmartThermometer {
-    fn get_name(&self) -> &String {
-        &self.name
+    fn get_id(&self) -> &Id {
+        &self.id
     }
 
-    async fn get_data(&self) -> DeviceData {
-        self.value.read().await.clone()
+    fn get_name(&self) -> &String {
+        &self.name
     }
 
     fn get_connection(&self) -> Option<&ConnectionType> {
@@ -80,7 +84,7 @@ impl SmartDevice for SmartThermometer {
 impl Report for SmartThermometer {
     /// Получить статус термометра
     async fn get_status_report(&self) -> String {
-        let value = self.value.read().await.as_thermometer();
+        let value = self.value.read().await;
         format!("{}: {} C°", self.name, value.temp)
     }
 }
@@ -98,7 +102,7 @@ mod thermometer_tests {
     #[tokio::test]
     async fn thermometer_get_temp() {
         let thermometer = SmartThermometer::new(String::from("Термометр"), 20.0);
-        assert_eq!(thermometer.get_temp().await, 20.0);
+        assert_eq!(thermometer.value.read().await.temp, 20.0);
     }
 
     #[tokio::test]
