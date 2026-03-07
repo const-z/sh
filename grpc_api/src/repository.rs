@@ -2,37 +2,6 @@ use tonic::Status;
 
 use super::smart_home_contracts;
 
-// #[derive(Debug)]
-// pub struct Connection {
-//     pub ip: String,
-//     pub port: String,
-//     pub service: String,
-// }
-
-// pub enum DeviceData {
-//     Socket(SocketData),
-//     Thermometer(ThermometerData),
-// }
-
-// pub enum ItemType {
-//     Home,
-//     Room,
-//     Socket,
-//     Thermo,
-// }
-
-// pub struct ReportItem {
-//     pub id: String,
-//     pub name: String,
-//     pub item_type: ItemType,
-//     pub device_connection: Option<Connection>,
-//     pub device_data: Option<DeviceData>,
-// }
-
-// pub struct Report {
-//     pub items: Vec<ReportItem>,
-// }
-
 pub trait Repository {
     async fn add_home(&self, name: impl Into<String>) -> Result<String, Status>;
     async fn delete_home(&self, home_id: impl Into<String>) -> Result<(), Status>;
