@@ -3,14 +3,12 @@ pub mod smart_home_contracts {
 }
 
 use smart_home_contracts::{
-    AddDeviceRequest, AddHomeRequest, AddRoomRequest, ConnectionSettings, DeleteHomeRequest,
-    DeleteRoomRequest, ListDevicesRequest, ListHomesRequest, ListRoomsRequest,
-    home_service_client::HomeServiceClient,
+    AddDeviceRequest, AddHomeRequest, AddRoomRequest, ConnectionSettings, DeleteDeviceRequest,
+    DeleteHomeRequest, DeleteRoomRequest, Item, ListDevicesRequest, ListHomesRequest,
+    ListRoomsRequest, home_service_client::HomeServiceClient,
 };
 use tonic::Status;
 use tonic_web_wasm_client::{Client, options::FetchOptions};
-
-use crate::wasm_grpc_client::smart_home_contracts::{DeleteDeviceRequest, Item};
 
 const SH_GRPS_SERVER: &str = "http://127.0.0.1:50051";
 
